@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yahali Pessach</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #fff;
+    color: #111;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 48px;
+    max-width: 680px;
+    width: 100%;
+    align-items: center;
+  }
+
+  .photo {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+  }
+  .photo-fallback {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border: 1px dashed #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 13px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+  }
+  p {
+    margin-top: 8px;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #555;
+  }
+  nav {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  nav a {
+    color: #111;
+    font-size: 16px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    width: fit-content;
+  }
+  nav a:hover { color: #555; }
+  .contact {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .contact a {
+    color: #777;
+    font-size: 14px;
+    text-decoration: none;
+    width: fit-content;
+  }
+  .contact a:hover { color: #111; }
+
+  @media (max-width: 680px) {
+    .card {
+      grid-template-columns: 1fr;
+      gap: 32px;
+      max-width: 380px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<main class="card">
+  <!-- Replace src with your photo file -->
+  <img class="photo" src="photo.jpg" alt="Yahali Pessach"
+       onerror="this.outerHTML='<div class=&quot;photo-fallback&quot;>photo.jpg</div>'">
+
+  <div>
+    <h1>Yahali Pessach</h1>
+    <p>Philosophy, Politics, Economics student @ UCL</p>
+    <nav>
+      <a href="the-price-is-right/">The Price Is Right</a>
+      <a href="friedmans-fury/">Friedman&rsquo;s Fury</a>
+      <a href="simonsays-datasays/">SimonSays?DataSays</a>
+    </nav>
+    <div class="contact">
+      <a href="https://www.linkedin.com/in/yahali-pessach/">linkedin.com/in/yahali-pessach</a>
+      <a href="mailto:yahali.pessach.25@ucl.ac.uk">yahali.pessach.25@ucl.ac.uk</a>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
