@@ -56,8 +56,10 @@
     line-height: 1.5;
   }
   #sketch { min-height: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
-  .hint code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
   .hint { font-size: 12px; color: #999; margin-top: 4px; }
+  .hint code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+  .hint em { font-style: italic; }
+  .hint strong { font-weight: 600; }
 
   button {
     margin-top: 20px;
@@ -97,6 +99,42 @@
 
   details { margin-top: 10px; }
   summary { font-size: 13px; color: #777; cursor: pointer; }
+
+  #postList { margin-top: 14px; }
+  .post-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  .post-row span { color: #333; }
+  .post-row time { color: #999; font-size: 13px; margin-left: 8px; }
+  .post-row button {
+    margin: 0;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: 400;
+    background: none;
+    color: #a12626;
+    border: 1px solid #d9b2b2;
+    border-radius: 4px;
+  }
+  .post-row button:hover { background: #fbeaea; }
+
+  #preview {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333;
+    min-height: 20px;
+  }
+  #preview p { margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -110,13 +148,13 @@
   <fieldset>
     <legend>GitHub connection</legend>
     <label for="owner">GitHub username</label>
-    <input type="text" id="owner" placeholder="e.g. yahali-pessach">
+    <input type="text" id="owner" placeholder="e.g. yahalipessach">
     <label for="repo">Repository name</label>
-    <input type="text" id="repo" placeholder="e.g. yahali-pessach.github.io">
+    <input type="text" id="repo" placeholder="e.g. yahalipessach.github.io">
     <label for="branch">Branch</label>
     <input type="text" id="branch" value="main">
     <label for="token">Personal Access Token</label>
-    <input type="password" id="token" placeholder="ghp_...">
+    <input type="password" id="token" placeholder="github_pat_...">
     <p class="hint">Stored only in this browser (localStorage), never uploaded anywhere except directly to GitHub's API when you publish. Needs a token with "repo" (or fine-grained: Contents read/write) permission on this repository.</p>
     <button type="button" class="secondary" id="saveSettings">Save settings</button>
     <button type="button" class="secondary" id="clearSettings">Clear saved token</button>
@@ -135,12 +173,17 @@
   <label for="title">Title</label>
   <input type="text" id="title" placeholder="e.g. Do markets know something we don&rsquo;t?">
 
+  <label for="subtitle">Subtitle (optional)</label>
+  <input type="text" id="subtitle" placeholder="e.g. A two-way game of chicken">
+
   <label for="date">Date</label>
   <input type="date" id="date">
 
   <label for="body">Body</label>
   <textarea id="body" placeholder="Write the post here. Leave a blank line between paragraphs."></textarea>
-  <p class="hint">Each blank-line-separated block becomes one paragraph. To place an image or sketch at a specific point, put <code>[image]</code> or <code>[sketch]</code> on its own line where you want it.</p>
+  <p class="hint">Each blank-line-separated block becomes one paragraph. Wrap text in <code>*asterisks*</code> for <em>italics</em>, <code>**double**</code> for <strong>bold</strong>. To place an image or sketch at a specific point, put <code>[image]</code> or <code>[sketch]</code> on its own line where you want it.</p>
+  <p class="hint">Live preview of formatting:</p>
+  <div id="preview"></div>
 
   <label for="images">Images (optional)</label>
   <input type="file" id="images" accept="image/*" multiple>
@@ -153,6 +196,18 @@
 
 <button type="button" id="publishBtn">Publish</button>
 <div id="status"></div>
+
+<fieldset>
+  <legend>Delete a post</legend>
+  <label for="delColumn">Column</label>
+  <select id="delColumn">
+    <option value="the-price-is-right">The Price Is Right</option>
+    <option value="friedmans-fury">Friedman&rsquo;s Fury</option>
+    <option value="simonsays-datasays">SimonSays?DataSays</option>
+  </select>
+  <button type="button" class="secondary" id="loadPostsBtn">Load posts</button>
+  <div id="postList"></div>
+</fieldset>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -187,7 +242,7 @@ function showStatus(kind, msg) {
   el.textContent = msg;
 }
 
-// ---- helpers ----
+// ---- text helpers ----
 function slugify(str) {
   return str.toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -199,8 +254,33 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return str
+    .split('&').join('&amp;')
+    .split('<').join('&lt;')
+    .split('>').join('&gt;');
 }
+// Runs AFTER escaping, so this only ever introduces safe <strong>/<em> tags.
+function applyInlineFormatting(escapedStr) {
+  let out = escapedStr.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
+  return out;
+}
+function formatBlock(block) {
+  return applyInlineFormatting(escapeHtml(block));
+}
+
+// ---- live preview ----
+function updatePreview() {
+  const raw = $('body').value;
+  const blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  $('preview').innerHTML = blocks
+    .filter(b => b !== '[image]' && b !== '[sketch]')
+    .map(b => `<p>${formatBlock(b)}</p>`)
+    .join('') || '<span style="color:#bbb">Preview appears here as you type…</span>';
+}
+$('body').addEventListener('input', updatePreview);
+updatePreview();
+
 function b64EncodeUnicode(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
@@ -210,7 +290,7 @@ function b64DecodeUnicode(str) {
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
-    r.onload = () => resolve(r.result.split(',')[1]); // strip data: prefix, already base64
+    r.onload = () => resolve(r.result.split(',')[1]);
     r.onerror = () => reject(new Error(`Could not read file ${file.name}`));
     r.readAsDataURL(file);
   });
@@ -252,11 +332,7 @@ async function getFile(path) {
 
 async function putFile(path, content, sha, message) {
   const branch = localStorage.getItem('admin_branch') || 'main';
-  const body = {
-    message,
-    content: b64EncodeUnicode(content),
-    branch
-  };
+  const body = { message, content: b64EncodeUnicode(content), branch };
   if (sha) body.sha = sha;
   const res = await ghRequest(path, {
     method: 'PUT',
@@ -269,11 +345,7 @@ async function putFile(path, content, sha, message) {
 
 async function putFileBase64(path, base64Content, sha, message) {
   const branch = localStorage.getItem('admin_branch') || 'main';
-  const body = {
-    message,
-    content: base64Content,
-    branch
-  };
+  const body = { message, content: base64Content, branch };
   if (sha) body.sha = sha;
   const res = await ghRequest(path, {
     method: 'PUT',
@@ -284,7 +356,8 @@ async function putFileBase64(path, base64Content, sha, message) {
   return res.json();
 }
 
-function buildPostHtml(columnName, title, dateDisplay, articleInnerHtml) {
+function buildPostHtml(columnName, title, subtitle, dateDisplay, articleInnerHtml) {
+  const subtitleHtml = subtitle ? `<p class="subtitle">${formatBlock(subtitle)}</p>` : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -305,9 +378,12 @@ function buildPostHtml(columnName, title, dateDisplay, articleInnerHtml) {
   .back { color: #777; font-size: 14px; text-decoration: none; }
   .back:hover { color: #111; }
   h1 { margin-top: 24px; font-size: 28px; font-weight: 600; line-height: 1.25; }
-  time { display: block; margin-top: 8px; color: #999; font-size: 14px; }
+  p.subtitle { margin-top: 8px; font-size: 17px; color: #666; line-height: 1.4; }
+  time { display: block; margin-top: 10px; color: #999; font-size: 14px; }
   article { margin-top: 32px; }
   article p { margin-bottom: 18px; font-size: 17px; }
+  article em { font-style: italic; }
+  article strong { font-weight: 600; }
   article img { max-width: 100%; margin: 8px 0 18px; display: block; }
   #sketch-container { margin: 8px 0 24px; }
   #sketch-container canvas { max-width: 100%; }
@@ -317,6 +393,7 @@ function buildPostHtml(columnName, title, dateDisplay, articleInnerHtml) {
 
 <a class="back" href="./">&larr; ${escapeHtml(columnName)}</a>
 <h1>${escapeHtml(title)}</h1>
+${subtitleHtml}
 <time>${dateDisplay}</time>
 
 <article>
@@ -352,6 +429,7 @@ $('publishBtn').addEventListener('click', async () => {
   const columnSlug = $('column').value;
   const columnName = COLUMN_NAMES[columnSlug];
   const title = $('title').value.trim();
+  const subtitle = $('subtitle').value.trim();
   const dateIso = $('date').value;
   const bodyRaw = $('body').value.trim();
   const sketchCode = $('sketch').value.trim();
@@ -375,7 +453,6 @@ $('publishBtn').addEventListener('click', async () => {
   $('publishBtn').disabled = true;
 
   try {
-    // Upload images first, collect their <img> tags in order
     const imageTags = [];
     for (let i = 0; i < imageFiles.length; i++) {
       const file = imageFiles[i];
@@ -387,7 +464,6 @@ $('publishBtn').addEventListener('click', async () => {
       imageTags.push(`<img src="media/${slug}-${i + 1}.${ext}" alt="${escapeHtml(title)}">`);
     }
 
-    // Sketch: upload the JS file if code was given, build the embed block
     let sketchBlock = '';
     if (sketchCode) {
       showStatus('pending', 'Uploading sketch…');
@@ -399,7 +475,6 @@ $('publishBtn').addEventListener('click', async () => {
         `<script src="${slug}-sketch.js"><\/script>`;
     }
 
-    // Assemble article body: split on blank lines, substitute markers
     const blocks = bodyRaw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
     let imgIdx = 0;
     let sketchUsed = false;
@@ -410,19 +485,17 @@ $('publishBtn').addEventListener('click', async () => {
       } else if (block === '[sketch]') {
         if (sketchBlock) { pieces.push(sketchBlock); sketchUsed = true; }
       } else {
-        pieces.push(`<p>${escapeHtml(block)}</p>`);
+        pieces.push(`<p>${formatBlock(block)}</p>`);
       }
     }
-    // Leftover images not consumed by markers go at the end
     while (imgIdx < imageTags.length) pieces.push(imageTags[imgIdx++]);
-    // Sketch with no marker used goes at the very top
     if (sketchBlock && !sketchUsed) pieces.unshift(sketchBlock);
 
     const articleHtml = pieces.join('\n');
 
     showStatus('pending', 'Publishing post…');
     const existingPost = await getFile(postPath);
-    const postHtml = buildPostHtml(columnName, title, dateDisplay, articleHtml);
+    const postHtml = buildPostHtml(columnName, title, subtitle, dateDisplay, articleHtml);
     await putFile(postPath, postHtml, existingPost ? existingPost.sha : null, `Add post: ${title}`);
 
     showStatus('pending', 'Updating column list…');
@@ -433,15 +506,124 @@ $('publishBtn').addEventListener('click', async () => {
 
     showStatus('ok', `Published to ${columnName}. Live in a minute or two at yoursite/${postPath}`);
     $('title').value = '';
+    $('subtitle').value = '';
     $('body').value = '';
     $('sketch').value = '';
     $('images').value = '';
+    updatePreview();
   } catch (err) {
     showStatus('err', err.message);
   } finally {
     $('publishBtn').disabled = false;
   }
 });
+
+async function deleteFile(path, sha, message) {
+  const branch = localStorage.getItem('admin_branch') || 'main';
+  const res = await ghRequest(path, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, sha, branch })
+  });
+  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+async function listDir(path) {
+  const res = await ghRequest(path, { method: 'GET' });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`Listing ${path} failed: ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+function removeFromList(indexHtml, slug) {
+  const doc = new DOMParser().parseFromString(indexHtml, 'text/html');
+  const link = doc.querySelector(`ul li a[href="${slug}.html"]`);
+  if (link) link.closest('li').remove();
+  return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML + '\n';
+}
+
+$('loadPostsBtn').addEventListener('click', async () => {
+  const columnSlug = $('delColumn').value;
+  const listEl = $('postList');
+  listEl.innerHTML = '<p class="hint">Loading…</p>';
+  try {
+    const indexFile = await getFile(`${columnSlug}/index.html`);
+    if (!indexFile) throw new Error('Could not load column index.');
+    const doc = new DOMParser().parseFromString(indexFile.content, 'text/html');
+    const items = Array.from(doc.querySelectorAll('ul li'));
+    if (items.length === 0) {
+      listEl.innerHTML = '<p class="hint">No posts in this column.</p>';
+      return;
+    }
+    listEl.innerHTML = '';
+    for (const li of items) {
+      const a = li.querySelector('a');
+      const t = li.querySelector('time');
+      if (!a) continue;
+      const slug = a.getAttribute('href').replace(/\.html$/, '');
+      const row = document.createElement('div');
+      row.className = 'post-row';
+      const label = document.createElement('span');
+      label.textContent = a.textContent;
+      if (t) {
+        const time = document.createElement('time');
+        time.textContent = t.textContent;
+        label.appendChild(time);
+      }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = 'Delete';
+      btn.addEventListener('click', () => deletePost(columnSlug, slug, a.textContent, row));
+      row.appendChild(label);
+      row.appendChild(btn);
+      listEl.appendChild(row);
+    }
+  } catch (err) {
+    listEl.innerHTML = '';
+    showStatus('err', err.message);
+  }
+});
+
+async function deletePost(columnSlug, slug, title, rowEl) {
+  if (!confirm(`Delete "${title}"? This removes it from the site permanently.`)) return;
+  showStatus('pending', 'Deleting…');
+  try {
+    // 1. Post file
+    const postPath = `${columnSlug}/${slug}.html`;
+    const postRes = await ghRequest(postPath, { method: 'GET' });
+    if (postRes.ok) {
+      const postData = await postRes.json();
+      await deleteFile(postPath, postData.sha, `Delete post: ${title}`);
+    }
+    // 2. Sketch file, if any
+    const sketchPath = `${columnSlug}/${slug}-sketch.js`;
+    const sketchRes = await ghRequest(sketchPath, { method: 'GET' });
+    if (sketchRes.ok) {
+      const sketchData = await sketchRes.json();
+      await deleteFile(sketchPath, sketchData.sha, `Delete sketch for: ${title}`);
+    }
+    // 3. Media files starting with the slug
+    const media = await listDir(`${columnSlug}/media`);
+    for (const f of media) {
+      if (f.name.startsWith(slug + '-')) {
+        await deleteFile(`${columnSlug}/media/${f.name}`, f.sha, `Delete media for: ${title}`);
+      }
+    }
+    // 4. Remove from column list
+    const indexPath = `${columnSlug}/index.html`;
+    const indexFile = await getFile(indexPath);
+    if (indexFile) {
+      const newIndexHtml = removeFromList(indexFile.content, slug);
+      await putFile(indexPath, newIndexHtml, indexFile.sha, `Unlist post: ${title}`);
+    }
+    rowEl.remove();
+    showStatus('ok', `Deleted "${title}".`);
+  } catch (err) {
+    showStatus('err', err.message);
+  }
+}
 </script>
 
 </body>
