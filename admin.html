@@ -460,7 +460,10 @@ $('publishBtn').addEventListener('click', async () => {
       const base64 = await readFileAsBase64(file);
       const ext = fileExt(file.name);
       const imgPath = `${columnSlug}/media/${slug}-${i + 1}.${ext}`;
-      await putFileBase64(imgPath, base64, null, `Add image for: ${title}`);
+      let imgSha = null;
+      const existingImg = await ghRequest(imgPath, { method: 'GET' });
+      if (existingImg.ok) imgSha = (await existingImg.json()).sha;
+      await putFileBase64(imgPath, base64, imgSha, `Add image for: ${title}`);
       imageTags.push(`<img src="media/${slug}-${i + 1}.${ext}" alt="${escapeHtml(title)}">`);
     }
 
@@ -468,7 +471,10 @@ $('publishBtn').addEventListener('click', async () => {
     if (sketchCode) {
       showStatus('pending', 'Uploading sketch…');
       const sketchPath = `${columnSlug}/${slug}-sketch.js`;
-      await putFile(sketchPath, sketchCode, null, `Add sketch for: ${title}`);
+      let sketchSha = null;
+      const existingSketch = await ghRequest(sketchPath, { method: 'GET' });
+      if (existingSketch.ok) sketchSha = (await existingSketch.json()).sha;
+      await putFile(sketchPath, sketchCode, sketchSha, `Add sketch for: ${title}`);
       sketchBlock =
         `<div id="sketch-container"></div>\n` +
         `<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"><\/script>\n` +
