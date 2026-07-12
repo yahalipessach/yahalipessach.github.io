@@ -494,10 +494,10 @@ $('publishBtn').addEventListener('click', async () => {
         pieces.push(`<p>${formatBlock(block)}</p>`);
       }
     }
-    // Unused media go BEFORE the text: sketch first, then images
+    // Unused media go BEFORE the text: images first, then sketch
+    if (sketchBlock && !sketchUsed) pieces.unshift(sketchBlock);
     const leftoverImgs = imageTags.slice(imgIdx);
     if (leftoverImgs.length) pieces.unshift(...leftoverImgs);
-    if (sketchBlock && !sketchUsed) pieces.unshift(sketchBlock);
 
     const articleHtml = pieces.join('\n');
 
