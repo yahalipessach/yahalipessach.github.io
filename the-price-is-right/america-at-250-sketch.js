@@ -107,9 +107,8 @@ function vlabel(tx,ty,s){
 
 function draw(){
   background(BG);
-  noStroke();fill(INK);textSize(18);textAlign(LEFT,TOP);
-  fill(MUTE);textSize(11);
-  text("Drag the payoffs.",30,38);
+  noStroke();fill(MUTE);textSize(11);textAlign(LEFT,TOP);
+  text("Drag the payoffs.",30,14);
   var br=bestResponses();
   var ne=pureNE(br);
   var mx=mixedNE();
