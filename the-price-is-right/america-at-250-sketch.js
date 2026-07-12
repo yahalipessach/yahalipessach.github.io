@@ -2,14 +2,33 @@ var INK="#1A1A18",MUTE="#8E8C85",FAINT="#E2E0D8",BG="#FAFAF8",RED="#d62728",BLUE
 var P=[[[-5,-4],[3,-2]],[[-2,2],[0,0]]];
 var DEFAULT=JSON.parse(JSON.stringify(P));
 var OBS={retreat:21/27,punish:8/27};
-var W,H=470,M={},drag=null;
+var W,H,M={},drag=null,lastW=0;
+
+function holderWidth(){
+  var holder=document.getElementById("sketch-container");
+  var w=holder?holder.clientWidth:windowWidth;
+  return Math.max(320,Math.min(w||592,700));
+}
+
+function computeLayout(){
+  W=holderWidth();
+  var left=66;              // room for rotated WHITE HOUSE labels
+  var right=10;
+  var gap=8;
+  var cw=Math.floor((W-left-right-gap)/2);
+  var ch=Math.round(cw*0.56);
+  M={x:left,y:78,cw:cw,ch:ch,gap:gap};
+  M.ly=M.y+2*ch+gap+14;     // legend/reset line
+  M.py=M.ly+30;             // results panel top
+  H=M.py+104+26;            // panel + credits + bottom pad
+}
 
 function setup(){
-  var holder=document.getElementById("sketch-container");
-  W=592; // matches the post text column; CSS only shrinks it on smaller screens
+  computeLayout();
   var c=createCanvas(W,H);
+  var holder=document.getElementById("sketch-container");
   if(holder){c.parent(holder);}
-  M={x:80,y:78,cw:150,ch:100};
+  lastW=W;
   textFont("Helvetica");
 }
 
@@ -94,7 +113,7 @@ function classify(ne){
 }
 
 function cellRect(r,c){
-  return{x:M.x+c*(M.cw+8),y:M.y+r*(M.ch+8),w:M.cw,h:M.ch};
+  return{x:M.x+c*(M.cw+M.gap),y:M.y+r*(M.ch+M.gap),w:M.cw,h:M.ch};
 }
 
 function payoffPos(r,c,who){
@@ -113,9 +132,18 @@ function vlabel(tx,ty,s){
 }
 
 function draw(){
+  // Re-measure: if the container width changed (resize, rotation), rebuild
+  if(frameCount%15===0){
+    var w=holderWidth();
+    if(w!==lastW){
+      computeLayout();
+      resizeCanvas(W,H);
+      lastW=W;
+    }
+  }
   background(BG);
   noStroke();fill(MUTE);textSize(11);textAlign(LEFT,TOP);
-  text("Drag the payoffs.",30,14);
+  text("Drag the payoffs.",14,12);
   var br=bestResponses();
   var ne=pureNE(br);
   var mx=mixedNE();
@@ -128,11 +156,11 @@ function draw(){
   }
   noStroke();fill(MUTE);textSize(10.5);textAlign(CENTER,BOTTOM);
   text("PUNISH",M.x+M.cw/2,M.y-10);
-  text("HOLD",M.x+M.cw*1.5+8,M.y-10);
-  text("MARKET",M.x+M.cw+4,M.y-28);
-  vlabel(M.x-66,M.y+M.ch+4,"WHITE  HOUSE");
-  vlabel(M.x-46,M.y+M.ch/2,"ESCALATE");
-  vlabel(M.x-46,M.y+M.ch*1.5+8,"RETREAT");
+  text("HOLD",M.x+M.cw*1.5+M.gap,M.y-10);
+  text("MARKET",M.x+M.cw+M.gap/2,M.y-28);
+  vlabel(M.x-52,M.y+M.ch+M.gap/2,"WHITE  HOUSE");
+  vlabel(M.x-32,M.y+M.ch/2,"ESCALATE");
+  vlabel(M.x-32,M.y+M.ch*1.5+M.gap,"RETREAT");
   var r,c,i,who;
   for(r=0;r<2;r++){
     for(c=0;c<2;c++){
@@ -158,7 +186,7 @@ function draw(){
         var isBR=who===0?br.brWH[c]===r:br.brM[r]===c;
         var isDrag=drag&&drag.r===r&&drag.c===c&&drag.who===who;
         noStroke();fill(who===0?BLUE:RED);
-        textSize(isDrag?23:20);textAlign(CENTER,CENTER);
+        textSize(isDrag?24:21);textAlign(CENTER,CENTER);
         var lab=nf(v,0,1).replace(".0","");
         text(lab,pp.x,pp.y);
         if(isBR){
@@ -169,34 +197,36 @@ function draw(){
       }
     }
   }
-  var ly=M.y+2*M.ch+22;
   noStroke();fill(MUTE);textSize(9.5);textAlign(LEFT,TOP);
-  text("underline = best response   \u2605 = Nash",M.x,ly);
-  text("reset",M.x+2*M.cw-20,ly);
+  text("underline = best response   \u2605 = Nash",M.x,M.ly);
+  text("reset",M.x+2*M.cw+M.gap-28,M.ly);
+  // Results panel below, spread across available width
   var px=M.x;
-  var py=ly+34;
-  fill(INK);textSize(20);text(name,px,py);
-  fill(MUTE);textSize(10);
-  text("model",px+206,py+4);
-  text("2025-26",px+276,py+4);
-  pair(px,py+34,"White House retreats",pred?pred.retreat:null,OBS.retreat);
-  pair(px,py+64,"Market punishes",pred?pred.punish:null,OBS.punish);
+  var py=M.py;
+  var colModel=M.x+2*M.cw+M.gap-118;
+  var colObs=M.x+2*M.cw+M.gap-38;
+  fill(INK);textSize(19);textAlign(LEFT,TOP);text(name,px,py);
+  fill(MUTE);textSize(10);textAlign(CENTER,TOP);
+  text("model",colModel,py+4);
+  text("2025-26",colObs,py+4);
+  pairRow(px,py+36,"White House retreats",pred?pred.retreat:null,OBS.retreat,colModel,colObs);
+  pairRow(px,py+64,"Market punishes",pred?pred.punish:null,OBS.punish,colModel,colObs);
   if(!pred){
-    fill(MUTE);textSize(11);
-    text("multiple equilibria: no single prediction",px+206,py+94,W-px-220,40);
+    fill(MUTE);textSize(10.5);textAlign(LEFT,TOP);
+    text("multiple equilibria: no single prediction",px,py+90);
   }
-  textSize(8.5);textAlign(LEFT,TOP);
+  fill(MUTE);textSize(8.5);textAlign(LEFT,TOP);
   text("Generated using p5.js, with the help of Claude AI. Data: CRS R48549.",M.x,py+104);
 }
 
-function pair(x,y,label,model,obs){
+function pairRow(x,y,label,model,obs,colModel,colObs){
   noStroke();fill(MUTE);textSize(10);textAlign(LEFT,CENTER);
   text(label,x,y+5);
   textAlign(CENTER,CENTER);textSize(13);
   fill(model==null?MUTE:INK);
-  text(model==null?"-":(model*100).toFixed(0)+"%",x+222,y+5);
+  text(model==null?"-":(model*100).toFixed(0)+"%",colModel,y+5);
   fill(INK);
-  text((obs*100).toFixed(0)+"%",x+296,y+5);
+  text((obs*100).toFixed(0)+"%",colObs,y+5);
 }
 
 function hitPayoff(a,b){
@@ -214,8 +244,7 @@ function hitPayoff(a,b){
 
 function mousePressed(){
   var s=mScale(),mx=mouseX*s,my=mouseY*s;
-  var ly=M.y+2*M.ch+22;
-  if(abs(my-(ly+5))<12&&mx>M.x+2*M.cw-26&&mx<M.x+2*M.cw+24){
+  if(abs(my-(M.ly+5))<12&&mx>M.x+2*M.cw+M.gap-34&&mx<M.x+2*M.cw+M.gap+16){
     P=JSON.parse(JSON.stringify(DEFAULT));
     return;
   }
