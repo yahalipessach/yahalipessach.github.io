@@ -108,7 +108,6 @@ function vlabel(tx,ty,s){
 function draw(){
   background(BG);
   noStroke();fill(INK);textSize(18);textAlign(LEFT,TOP);
-  text("A (not so accurate) game of chicken",30,14);
   fill(MUTE);textSize(11);
   text("Drag the payoffs.",30,38);
   var br=bestResponses();
