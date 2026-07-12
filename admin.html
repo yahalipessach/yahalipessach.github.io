@@ -187,11 +187,11 @@
 
   <label for="images">Images (optional)</label>
   <input type="file" id="images" accept="image/*" multiple>
-  <p class="hint">Uploaded in the order chosen. Fill <code>[image]</code> markers in the body first; any left over are added at the end of the post.</p>
+  <p class="hint">Uploaded in the order chosen. By default they appear before the text (after the sketch, if any). Use <code>[image]</code> markers in the body to place them elsewhere.</p>
 
   <label for="sketch">p5.js sketch code (optional)</label>
   <textarea id="sketch" placeholder="function setup() {&#10;  createCanvas(600, 400).parent('sketch-container');&#10;}&#10;function draw() {&#10;  background(240);&#10;}"></textarea>
-  <p class="hint">Paste a normal p5.js sketch (global mode). Call <code>.parent('sketch-container')</code> on your <code>createCanvas()</code> so it lands in the post. Placed where a <code>[sketch]</code> marker appears in the body, or at the top if there isn&rsquo;t one.</p>
+  <p class="hint">Paste a normal p5.js sketch (global mode). Call <code>.parent('sketch-container')</code> on your <code>createCanvas()</code> so it lands in the post. Appears at the top of the post by default, or wherever a <code>[sketch]</code> marker sits in the body.</p>
 </fieldset>
 
 <button type="button" id="publishBtn">Publish</button>
@@ -494,7 +494,9 @@ $('publishBtn').addEventListener('click', async () => {
         pieces.push(`<p>${formatBlock(block)}</p>`);
       }
     }
-    while (imgIdx < imageTags.length) pieces.push(imageTags[imgIdx++]);
+    // Unused media go BEFORE the text: sketch first, then images
+    const leftoverImgs = imageTags.slice(imgIdx);
+    if (leftoverImgs.length) pieces.unshift(...leftoverImgs);
     if (sketchBlock && !sketchUsed) pieces.unshift(sketchBlock);
 
     const articleHtml = pieces.join('\n');
