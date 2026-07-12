@@ -6,11 +6,18 @@ var W,H=402,M={},drag=null;
 
 function setup(){
   var holder=document.getElementById("sketch-container");
-  W=Math.min(950,(holder?holder.clientWidth:windowWidth)||950);
+  W=950; // fixed design width; page CSS scales the canvas to the text column
   var c=createCanvas(W,H);
   if(holder){c.parent(holder);}
-  M={x:96,y:88,cw:Math.min(185,W*0.23),ch:120};
+  M={x:96,y:88,cw:185,ch:120};
   textFont("Helvetica");
+}
+
+function mScale(){
+  var cv=document.querySelector("#sketch-container canvas");
+  if(!cv){return 1;}
+  var r=cv.getBoundingClientRect();
+  return r.width?W/r.width:1;
 }
 
 function bestResponses(){
@@ -206,20 +213,22 @@ function hitPayoff(a,b){
 }
 
 function mousePressed(){
+  var s=mScale(),mx=mouseX*s,my=mouseY*s;
   var ly=M.y+2*M.ch+22;
-  if(abs(mouseY-(ly+5))<12&&mouseX>M.x+2*M.cw-26&&mouseX<M.x+2*M.cw+24){
+  if(abs(my-(ly+5))<12&&mx>M.x+2*M.cw-26&&mx<M.x+2*M.cw+24){
     P=JSON.parse(JSON.stringify(DEFAULT));
     return;
   }
-  var h=hitPayoff(mouseX,mouseY);
+  var h=hitPayoff(mx,my);
   if(h){
-    drag={r:h.r,c:h.c,who:h.who,startY:mouseY,startV:P[h.r][h.c][h.who]};
+    drag={r:h.r,c:h.c,who:h.who,startY:my,startV:P[h.r][h.c][h.who]};
   }
 }
 
 function mouseDragged(){
   if(!drag){return;}
-  P[drag.r][drag.c][drag.who]=constrain(Math.round((drag.startV+(drag.startY-mouseY)/14)*2)/2,-8,8);
+  var my=mouseY*mScale();
+  P[drag.r][drag.c][drag.who]=constrain(Math.round((drag.startV+(drag.startY-my)/14)*2)/2,-8,8);
   return false;
 }
 
@@ -227,7 +236,8 @@ function mouseReleased(){drag=null;}
 function touchEnded(){drag=null;}
 function touchStarted(){
   mousePressed();
-  if(hitPayoff(mouseX,mouseY)){return false;}
+  var s=mScale();
+  if(hitPayoff(mouseX*s,mouseY*s)){return false;}
 }
 function touchMoved(){
   if(drag){
