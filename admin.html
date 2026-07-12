@@ -112,17 +112,29 @@
   }
   .post-row span { color: #333; }
   .post-row time { color: #999; font-size: 13px; margin-left: 8px; }
+  .post-row .btns { display: flex; gap: 6px; }
   .post-row button {
     margin: 0;
     padding: 4px 10px;
     font-size: 13px;
     font-weight: 400;
     background: none;
-    color: #a12626;
-    border: 1px solid #d9b2b2;
     border-radius: 4px;
   }
-  .post-row button:hover { background: #fbeaea; }
+  .post-row button.edit { color: #333; border: 1px solid #ccc; }
+  .post-row button.edit:hover { background: #f4f4f4; }
+  .post-row button.del { color: #a12626; border: 1px solid #d9b2b2; }
+  .post-row button.del:hover { background: #fbeaea; }
+  #editBanner {
+    display: none;
+    margin-top: 16px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    background: #fff8e1;
+    color: #7a5c00;
+    font-size: 14px;
+  }
+  #editBanner button { margin: 0 0 0 10px; padding: 3px 9px; font-size: 12px; font-weight: 400; background: none; color: #7a5c00; border: 1px solid #d9c583; border-radius: 4px; }
 
   #preview {
     margin-top: 10px;
@@ -194,11 +206,13 @@
   <p class="hint">Paste a normal p5.js sketch (global mode). Call <code>.parent('sketch-container')</code> on your <code>createCanvas()</code> so it lands in the post. Appears at the top of the post by default, or wherever a <code>[sketch]</code> marker sits in the body.</p>
 </fieldset>
 
+<div id="editBanner">Editing <strong id="editingTitle"></strong> — publishing will update this post.<button type="button" id="cancelEditBtn">Cancel edit</button></div>
+
 <button type="button" id="publishBtn">Publish</button>
 <div id="status"></div>
 
 <fieldset>
-  <legend>Delete a post</legend>
+  <legend>Manage posts (edit / delete)</legend>
   <label for="delColumn">Column</label>
   <select id="delColumn">
     <option value="the-price-is-right">The Price Is Right</option>
@@ -407,7 +421,17 @@ ${articleInnerHtml}
 
 function insertIntoList(indexHtml, slug, title, dateDisplay) {
   const doc = new DOMParser().parseFromString(indexHtml, 'text/html');
-  const ul = doc.querySelector('ul');
+  let ul = doc.querySelector('ul');
+  if (!ul) {
+    // Column page lost its list; recreate it after the header/tagline
+    ul = doc.createElement('ul');
+    const anchor = doc.querySelector('.header') || doc.querySelector('.tagline') || doc.querySelector('h1');
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(ul, anchor.nextSibling);
+    } else {
+      doc.body.appendChild(ul);
+    }
+  }
   const empty = doc.querySelector('.empty');
   if (empty) empty.remove();
   const li = doc.createElement('li');
@@ -421,6 +445,94 @@ function insertIntoList(indexHtml, slug, title, dateDisplay) {
   ul.insertBefore(li, ul.firstChild);
   return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML + '\n';
 }
+
+let editState = null;
+
+function nodeToMarkdown(node) {
+  let out = '';
+  node.childNodes.forEach(ch => {
+    if (ch.nodeType === 3) { out += ch.textContent; }
+    else if (ch.nodeType === 1) {
+      const inner = nodeToMarkdown(ch);
+      if (ch.tagName === 'EM') out += '*' + inner + '*';
+      else if (ch.tagName === 'STRONG') out += '**' + inner + '**';
+      else out += inner;
+    }
+  });
+  return out;
+}
+
+function displayDateToIso(str) {
+  const d = new Date(str);
+  if (isNaN(d)) return new Date().toISOString().slice(0,10);
+  return d.toISOString().slice(0,10);
+}
+
+async function loadPostForEdit(columnSlug, slug, listTitle) {
+  showStatus('pending', 'Loading post…');
+  try {
+    const postFile = await getFile(`${columnSlug}/${slug}.html`);
+    if (!postFile) throw new Error('Post file not found.');
+    const doc = new DOMParser().parseFromString(postFile.content, 'text/html');
+    const title = (doc.querySelector('h1') || {}).textContent || listTitle;
+    const subtitleEl = doc.querySelector('p.subtitle');
+    const subtitle = subtitleEl ? nodeToMarkdown(subtitleEl) : '';
+    const timeEl = doc.querySelector('time');
+    const dateIso = timeEl ? displayDateToIso(timeEl.textContent) : new Date().toISOString().slice(0,10);
+
+    const existingImages = [];
+    const bodyBlocks = [];
+    const article = doc.querySelector('article');
+    if (article) {
+      article.childNodes.forEach(ch => {
+        if (ch.nodeType !== 1) return;
+        if (ch.tagName === 'P') bodyBlocks.push(nodeToMarkdown(ch));
+        else if (ch.tagName === 'IMG') { existingImages.push(ch.getAttribute('src')); bodyBlocks.push('[image]'); }
+        else if (ch.id === 'sketch-container') bodyBlocks.push('[sketch]');
+      });
+    }
+
+    // Sketch code: separate file (admin-published) or inline (manually built)
+    let sketchCode = '';
+    const sketchFile = await getFile(`${columnSlug}/${slug}-sketch.js`);
+    if (sketchFile) { sketchCode = sketchFile.content; }
+    else {
+      const scripts = doc.querySelectorAll('script:not([src])');
+      scripts.forEach(s => { if (s.textContent.includes('setup')) sketchCode = s.textContent.trim(); });
+    }
+
+    $('column').value = columnSlug;
+    $('title').value = title;
+    $('subtitle').value = subtitle;
+    $('date').value = dateIso;
+    $('body').value = bodyBlocks.join('\n\n');
+    $('sketch').value = sketchCode;
+    $('images').value = '';
+    updatePreview();
+
+    editState = { columnSlug, slug, existingImages };
+    $('editingTitle').textContent = title;
+    $('editBanner').style.display = 'block';
+    $('publishBtn').textContent = 'Update post';
+    showStatus('ok', 'Post loaded into the form. Make your changes and press Update post.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    showStatus('err', err.message);
+  }
+}
+
+function clearEditState() {
+  editState = null;
+  $('editBanner').style.display = 'none';
+  $('publishBtn').textContent = 'Publish';
+}
+
+$('cancelEditBtn').addEventListener('click', () => {
+  clearEditState();
+  $('title').value = ''; $('subtitle').value = ''; $('body').value = ''; $('sketch').value = ''; $('images').value = '';
+  updatePreview();
+  showStatus('ok', 'Edit cancelled.');
+});
 
 $('publishBtn').addEventListener('click', async () => {
   const owner = localStorage.getItem('admin_owner');
@@ -446,7 +558,8 @@ $('publishBtn').addEventListener('click', async () => {
   }
 
   const dateDisplay = formatDate(dateIso);
-  const slug = slugify(title);
+  const editing = editState && editState.columnSlug === columnSlug;
+  const slug = editing ? editState.slug : slugify(title);
   const postPath = `${columnSlug}/${slug}.html`;
   const indexPath = `${columnSlug}/index.html`;
 
@@ -454,6 +567,11 @@ $('publishBtn').addEventListener('click', async () => {
 
   try {
     const imageTags = [];
+    if (editing && imageFiles.length === 0 && editState.existingImages.length) {
+      editState.existingImages.forEach(src => {
+        imageTags.push(`<img src="${src}" alt="${escapeHtml(title)}">`);
+      });
+    }
     for (let i = 0; i < imageFiles.length; i++) {
       const file = imageFiles[i];
       showStatus('pending', `Uploading image ${i + 1} of ${imageFiles.length}…`);
@@ -509,10 +627,13 @@ $('publishBtn').addEventListener('click', async () => {
     showStatus('pending', 'Updating column list…');
     const indexFile = await getFile(indexPath);
     if (!indexFile) throw new Error(`Could not find ${indexPath} in the repo.`);
-    const newIndexHtml = insertIntoList(indexFile.content, slug, title, dateDisplay);
+    let idxHtml = indexFile.content;
+    if (editing) idxHtml = removeFromList(idxHtml, slug);
+    const newIndexHtml = insertIntoList(idxHtml, slug, title, dateDisplay);
     await putFile(indexPath, newIndexHtml, indexFile.sha, `List post: ${title}`);
 
-    showStatus('ok', `Published to ${columnName}. Live in a minute or two at yoursite/${postPath}`);
+    showStatus('ok', (editing ? 'Updated' : 'Published') + ` — live in a minute or two at yoursite/${postPath}`);
+    clearEditState();
     $('title').value = '';
     $('subtitle').value = '';
     $('body').value = '';
@@ -580,12 +701,22 @@ $('loadPostsBtn').addEventListener('click', async () => {
         time.textContent = t.textContent;
         label.appendChild(time);
       }
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = 'Delete';
-      btn.addEventListener('click', () => deletePost(columnSlug, slug, a.textContent, row));
+      const btns = document.createElement('div');
+      btns.className = 'btns';
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'edit';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => loadPostForEdit(columnSlug, slug, a.textContent));
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'del';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', () => deletePost(columnSlug, slug, a.textContent, row));
+      btns.appendChild(editBtn);
+      btns.appendChild(delBtn);
       row.appendChild(label);
-      row.appendChild(btn);
+      row.appendChild(btns);
       listEl.appendChild(row);
     }
   } catch (err) {
