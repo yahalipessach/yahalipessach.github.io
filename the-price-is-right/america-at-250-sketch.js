@@ -2,11 +2,11 @@ var INK="#1A1A18",MUTE="#8E8C85",FAINT="#E2E0D8",BG="#FAFAF8",RED="#d62728",BLUE
 var P=[[[-5,-4],[3,-2]],[[-2,2],[0,0]]];
 var DEFAULT=JSON.parse(JSON.stringify(P));
 var OBS={retreat:21/27,punish:8/27};
-var W,H=402,M={},drag=null;
+var W,H=560,M={},drag=null;
 
 function setup(){
   var holder=document.getElementById("sketch-container");
-  W=950; // fixed design width; page CSS scales the canvas to the text column
+  W=592; // matches the post text column; CSS only shrinks it on smaller screens
   var c=createCanvas(W,H);
   if(holder){c.parent(holder);}
   M={x:96,y:88,cw:185,ch:120};
@@ -173,20 +173,20 @@ function draw(){
   noStroke();fill(MUTE);textSize(9.5);textAlign(LEFT,TOP);
   text("underline = best response   \u2605 = Nash",M.x,ly);
   text("reset",M.x+2*M.cw-20,ly);
-  var px=M.x+2*M.cw+52;
-  var py=M.y+4;
+  var px=M.x;
+  var py=ly+34;
   fill(INK);textSize(20);text(name,px,py);
   fill(MUTE);textSize(10);
-  text("model",px+126,py+32);
-  text("2025-26",px+196,py+32);
-  pair(px,py+46,"White House retreats",pred?pred.retreat:null,OBS.retreat);
-  pair(px,py+76,"Market punishes",pred?pred.punish:null,OBS.punish);
+  text("model",px+206,py+4);
+  text("2025-26",px+276,py+4);
+  pair(px,py+34,"White House retreats",pred?pred.retreat:null,OBS.retreat);
+  pair(px,py+64,"Market punishes",pred?pred.punish:null,OBS.punish);
   if(!pred){
     fill(MUTE);textSize(11);
-    text("multiple equilibria: no single prediction",px,py+118,W-px-14,40);
+    text("multiple equilibria: no single prediction",px+206,py+94,W-px-220,40);
   }
   textSize(8.5);textAlign(LEFT,TOP);
-  text("Generated using p5.js, with the help of Claude AI. Data: CRS R48549.",M.x,ly+34);
+  text("Generated using p5.js, with the help of Claude AI. Data: CRS R48549.",M.x,py+104);
 }
 
 function pair(x,y,label,model,obs){
@@ -194,9 +194,9 @@ function pair(x,y,label,model,obs){
   text(label,x,y+5);
   textAlign(CENTER,CENTER);textSize(13);
   fill(model==null?MUTE:INK);
-  text(model==null?"-":(model*100).toFixed(0)+"%",x+142,y+5);
+  text(model==null?"-":(model*100).toFixed(0)+"%",x+222,y+5);
   fill(INK);
-  text((obs*100).toFixed(0)+"%",x+212,y+5);
+  text((obs*100).toFixed(0)+"%",x+296,y+5);
 }
 
 function hitPayoff(a,b){
