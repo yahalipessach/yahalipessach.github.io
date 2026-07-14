@@ -193,7 +193,7 @@
 
   <label for="body">Body</label>
   <textarea id="body" placeholder="Write the post here. Leave a blank line between paragraphs."></textarea>
-  <p class="hint">Each blank-line-separated block becomes one paragraph. Wrap text in <code>*asterisks*</code> for <em>italics</em>, <code>**double**</code> for <strong>bold</strong>. To place an image or sketch at a specific point, put <code>[image]</code> or <code>[sketch]</code> on its own line where you want it.</p>
+  <p class="hint">Each blank-line-separated block becomes one paragraph. Wrap text in <code>*asterisks*</code> for <em>italics</em>, <code>**double**</code> for <strong>bold</strong>, and <code>[text](https://url)</code> for links. To place an image or sketch at a specific point, put <code>[image]</code> or <code>[sketch]</code> on its own line where you want it.</p>
   <p class="hint">Live preview of formatting:</p>
   <div id="preview"></div>
 
@@ -275,7 +275,8 @@ function escapeHtml(str) {
 }
 // Runs AFTER escaping, so this only ever introduces safe <strong>/<em> tags.
 function applyInlineFormatting(escapedStr) {
-  let out = escapedStr.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+  let out = escapedStr.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>');
+  out = out.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
   out = out.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
   return out;
 }
@@ -396,6 +397,8 @@ function buildPostHtml(columnName, title, subtitle, dateDisplay, articleInnerHtm
   time { display: block; margin-top: 10px; color: #999; font-size: 14px; }
   article { margin-top: 32px; }
   article p { margin-bottom: 18px; font-size: 17px; text-align: justify; }
+  article a { color: #111; text-underline-offset: 3px; }
+  article a:hover { color: #555; }
   article em { font-style: italic; }
   article strong { font-weight: 600; }
   article img { max-width: 100%; margin: 8px 0 18px; display: block; }
@@ -456,6 +459,7 @@ function nodeToMarkdown(node) {
       const inner = nodeToMarkdown(ch);
       if (ch.tagName === 'EM') out += '*' + inner + '*';
       else if (ch.tagName === 'STRONG') out += '**' + inner + '**';
+      else if (ch.tagName === 'A') out += '[' + inner + '](' + ch.getAttribute('href') + ')';
       else out += inner;
     }
   });
