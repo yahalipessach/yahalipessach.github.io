@@ -6,11 +6,11 @@ const D=iC*407/653, CH=19*.035+D*(1-305/407), CK=iC-CH           // Circle leg: 
 const HOLD=CH+iO, KEPT=iT+CK                                     // Tether contributes nothing
 const ROWS=[['Tether (USDT)','no rewards, in any country',UT,iT,0,iT],
             ['Circle (USDC)','only if a platform passes it on',UC,iC,CH,CK],
-            ['Every other issuer, credited in full','USDS, USDe, DAI, USD1, PYUSD, +370',OT,iO,iO,0]]
+            ['Every other issuer','USDS, USDe, DAI, USD1, PYUSD, +370',OT,iO,iO,0]]
 
 const INK='#1A1A18', GY='#6e6e6a', FT='#a3a3a0', RL='#e4e4e0'
 const DK='#3d3d3a', MD='#8a8a86', LT='#c9c9c5'
-const W=592, H=680, M=14, S=20, G=24, NW=11, X0=236, X1=372, TP=100
+const W=592, H=700, M=14, S=20, G=24, NW=11, X0=236, X1=372, TP=100
 const CX=[M,0,318,404,498,578]
 const hT=TP, kT=TP+HOLD*S+G, lT=TP+(HOLD*S+G+KEPT*S-TOT*S)/2
 
