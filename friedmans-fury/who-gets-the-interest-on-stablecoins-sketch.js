@@ -1,4 +1,4 @@
-// At most a quarter of stablecoin interest can reach a holder
+// At most a quarter of stablecoin interest can reach stablecoin holders
 
 const B=.0385, UT=184.2, UC=73.4, TF=303.2, OT=TF-UT-UC          // float $bn, 12 Jul 2026
 const iT=UT*B, iC=UC*B, iO=OT*B, TOT=iT+iC+iO                    // interest at the 3-month bill (FRED DGS3MO, 10 Jul 2026)
@@ -42,7 +42,7 @@ function flow(a0,a1,b0,b1,c,al){
 function draw(){
   background(255)
   T('At most a quarter of stablecoin interest',M,34,18,INK,LEFT,BOLD)
-  T('can reach a holder',M,56,18,INK,LEFT,BOLD)
+  T('can reach stablecoin holders',M,56,18,INK,LEFT,BOLD)
 
   const sp=lT+HOLD*S
   flow(lT,sp,hT,hT+HOLD*S,DK,70)
@@ -61,7 +61,7 @@ function draw(){
   T('$303bn of stablecoin reserves',X0-18,lc+28,10.5,GY,RIGHT)
   T('$2.9bn',lx,hc-2,22,INK,LEFT,BOLD)
   T('25%',lx+textWidth('$2.9bn')+12,hc-2,13,GY)
-  T('The most that can reach a holder',lx,hc+16,10.5,GY)
+  T('The most that can reach holders',lx,hc+16,10.5,GY)
   T('$8.8bn',lx,kc-6,22,INK,LEFT,BOLD)
   T('75%',lx+textWidth('$8.8bn')+12,kc-6,13,GY)
   T('Kept by the issuers and the',lx,kc+12,10.5,GY)
