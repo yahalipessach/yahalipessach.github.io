@@ -41,8 +41,8 @@ function flow(a0,a1,b0,b1,c,al){
 
 function draw(){
   background(255)
-  T('At most a quarter of stablecoin interest',M,34,18,INK,LEFT,BOLD)
-  T('can reach stablecoin holders',M,56,18,INK,LEFT,BOLD)
+  T('At most 25% of interest on stablecoin',M,34,18,INK,LEFT,BOLD)
+  T('reserves reaches consumers - likely far less',M,56,18,INK,LEFT,BOLD)
 
   const sp=lT+HOLD*S
   flow(lT,sp,hT,hT+HOLD*S,DK,70)
