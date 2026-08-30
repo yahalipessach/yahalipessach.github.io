@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Friedman’s Fury: Roofs or Ceilings? — Yahali Pessach</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('../fonts/inter.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  a { text-decoration: none; }
+  body {
+    background: transparent;
+    color: #fff;
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 64px 24px;
+    line-height: 1.65;
+  }
+  .back { color: #fff; font-size: 14px; text-decoration: none; }
+  .back:hover { color: #fff; }
+  h1 { margin-top: 24px; font-size: 27px; font-weight: 600; line-height: 1.25; }
+  time { display: block; margin-top: 10px; color: #fff; font-size: 14px; }
+  article { margin-top: 32px; }
+  article p { margin-bottom: 18px; font-size: 17px; text-align: justify; }
+  article p a { text-decoration: underline; text-underline-offset: 3px; }
+  article a { color: #fff; text-underline-offset: 3px; }
+  article a:hover { color: #fff; }
+  article em { font-style: italic; }
+  article strong { font-weight: 600; }
+  article img { max-width: 100%; margin: 8px 0 18px; display: block; }
+  h1 .col { color: #fff; }
+  .post-header { margin-top: 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .post-header h1 { margin-top: 0; }
+  .col-logo { width: 120px; height: auto; flex-shrink: 0; opacity: .95; }
+  @media (max-width: 560px) { .col-logo { width: 92px; } }
+  .datasays { margin: 40px 0 8px; background: #fff; border-radius: 6px; padding: 22px 24px 14px; }
+  .datasays h2 { font-size: 15px; font-weight: 600; color: #6f6f6f; margin-bottom: 14px; }
+  .datasays img, .datasays canvas { mix-blend-mode: multiply; }
+  @media (max-width: 700px) {
+    body { padding: 44px 20px 56px; }
+    .back { display: inline-block; padding: 6px 0; }
+    .post-header { gap: 14px; align-items: flex-start; }
+    h1 { font-size: 22px; line-height: 1.28; }
+    .col-logo { width: 66px; }
+    article { margin-top: 24px; }
+    article p { text-align: left; font-size: 16.5px; }
+    article p a { word-break: break-word; }
+    .datasays { padding: 18px 16px 12px; margin: 32px 0 8px; }
+    .datasays h2 { font-size: 14px; }
+    }
+  html { background: #216DB0; }
+  #maze { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<canvas id="maze"></canvas>
+<script>
+/* contour background, new landscape each load */
+(function(){
+  var c = document.getElementById("maze"), x = c.getContext("2d");
+  var RES = 1, seed = null;
+
+  function roll(W, H){
+    var bumps = [], n = 5 + Math.floor(Math.random() * 4);
+    for (var k = 0; k < n; k++) bumps.push({
+      x: W * (-0.10 + Math.random() * 0.62), y: H * (0.42 + Math.random() * 0.72),
+      a: (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.9),
+      r: Math.min(W, H) * (0.18 + Math.random() * 0.34)
+    });
+    return { bumps: bumps, tx: Math.random() * 1000, ty: Math.random() * 1000,
+             hue0: Math.random() * 360, hstep: 9 + Math.random() * 7, sat: 88 + Math.random() * 10 };
+  }
+
+  function draw(d, reroll){
+    var W = innerWidth, H = innerHeight;
+    if (reroll || !seed) seed = roll(W, H);
+    var bumps = seed.bumps;
+
+    c.width = W * d; c.height = H * d; c.style.width = W + "px"; c.style.height = H + "px";
+    x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, W, H);
+
+    var LV = 22, NAR = W < 760, AF = NAR ? 0.5 : 1;
+    function col(L, a){ return "hsla(" + ((seed.hue0 + L * seed.hstep) % 360) + "," + seed.sat + "%,78%," + a + ")"; }
+
+    var step = 13, cols = Math.ceil(W / step) + 1, rows = Math.ceil(H / step) + 1,
+        g = new Float32Array(cols * rows), lo2 = 1e9, hi2 = -1e9;
+
+    /* gaussians separate, so exp() once per column and row, not per cell */
+    var EX = [], EY = [], nb = bumps.length;
+    for (var k2 = 0; k2 < nb; k2++){
+      var bp = bumps[k2], q = -1 / (2 * bp.r * bp.r),
+          ex = new Float64Array(cols), ey = new Float64Array(rows);
+      for (var i3 = 0; i3 < cols; i3++){ var ddx = i3 * step - bp.x; ex[i3] = Math.exp(q * ddx * ddx); }
+      for (var j3 = 0; j3 < rows; j3++){ var ddy = j3 * step - bp.y; ey[j3] = Math.exp(q * ddy * ddy); }
+      EX.push(ex); EY.push(ey);
+    }
+    var SX = new Float64Array(cols), CY = new Float64Array(rows);
+    for (var i4 = 0; i4 < cols; i4++) SX[i4] = 0.20 * Math.sin((i4 * step + seed.tx) / 260);
+    for (var j4 = 0; j4 < rows; j4++) CY[j4] = 0.16 * Math.cos((j4 * step + seed.ty) / 210);
+
+    for (var j = 0; j < rows; j++){
+      var cyj = CY[j], base = j * cols;
+      for (var i = 0; i < cols; i++){
+        var v2 = SX[i] + cyj;
+        for (var k3 = 0; k3 < nb; k3++) v2 += bumps[k3].a * EX[k3][i] * EY[k3][j];
+        g[base + i] = v2;
+        if (v2 < lo2) lo2 = v2; if (v2 > hi2) hi2 = v2;
+      }
+    }
+
+    /* marching squares, one pass: each cell only spans the levels its corners straddle */
+    var span = (hi2 - lo2) || 1, inv = LV / span, seg = new Array(LV);
+    for (var qq = 0; qq < LV; qq++) seg[qq] = [];
+
+    for (var j2 = 0; j2 < rows - 1; j2++) for (var i2 = 0; i2 < cols - 1; i2++){
+      var a = g[j2 * cols + i2], b = g[j2 * cols + i2 + 1],
+          cc = g[(j2 + 1) * cols + i2 + 1], dd = g[(j2 + 1) * cols + i2],
+          mn = a < b ? a : b, mx = a > b ? a : b;
+      if (cc < mn) mn = cc; if (cc > mx) mx = cc;
+      if (dd < mn) mn = dd; if (dd > mx) mx = dd;
+      var l0 = Math.ceil((mn - lo2) * inv), l1 = Math.floor((mx - lo2) * inv);
+      if (l0 < 1) l0 = 1; if (l1 > LV - 1) l1 = LV - 1;
+      if (l1 < l0) continue;
+      var x0 = i2 * step, y0 = j2 * step, x1 = x0 + step, y1 = y0 + step,
+          mxp = (x0 + x1) / 2, myp = (y0 + y1) / 2;
+      for (var L2 = l0; L2 <= l1; L2++){
+        var lvl = lo2 + span * L2 / LV,
+            s = (a > lvl ? 1 : 0) | (b > lvl ? 2 : 0) | (cc > lvl ? 4 : 0) | (dd > lvl ? 8 : 0);
+        if (s === 0 || s === 15) continue;
+        var pth = seg[L2];
+        switch (s){
+          case 1: case 14: pth.push("M", x0, myp, "L", mxp, y0); break;
+          case 2: case 13: pth.push("M", mxp, y0, "L", x1, myp); break;
+          case 3: case 12: pth.push("M", x0, myp, "L", x1, myp); break;
+          case 4: case 11: pth.push("M", x1, myp, "L", mxp, y1); break;
+          case 5: pth.push("M", x0, myp, "L", mxp, y1, "M", mxp, y0, "L", x1, myp); break;
+          case 6: case 9: pth.push("M", mxp, y0, "L", mxp, y1); break;
+          case 7: case 8: pth.push("M", x0, myp, "L", mxp, y1); break;
+          case 10: pth.push("M", x0, myp, "L", mxp, y0, "M", x1, myp, "L", mxp, y1); break;
+        }
+      }
+    }
+    x.lineJoin = "miter";
+    for (var L3 = 1; L3 < LV; L3++){
+      var pr = seg[L3]; if (!pr.length) continue;
+      var ix = (L3 % 4 === 0);
+      x.strokeStyle = col(L3, (ix ? 0.55 : 0.34) * AF); x.lineWidth = ix ? 1.6 : 1;
+      x.stroke(new Path2D(pr.join(" ")));
+    }
+
+    /* fade out from the bottom-left */
+    var cx = W * 0.06, cy = H * 1.02, R2 = Math.max(W, H) * (NAR ? 0.42 : 0.70),
+        gr = x.createRadialGradient(cx, cy, 0, cx, cy, R2);
+    gr.addColorStop(0, "rgba(0,0,0,1)");     gr.addColorStop(.38, "rgba(0,0,0,.92)");
+    gr.addColorStop(.68, "rgba(0,0,0,.26)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    x.globalCompositeOperation = "destination-in";
+    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    x.globalCompositeOperation = "source-over";
+  }
+
+  draw(RES, true);
+
+  var t; addEventListener("resize", function(){
+    clearTimeout(t); t = setTimeout(function(){ draw(RES, true); }, 150);
+  });
+})();
+</script>
+
+<a class="back" href="./">&larr; Writings</a>
+<div class="post-header">
+  <div>
+    <h1><span class="col">Friedman’s Fury</span><br>Roofs or Ceilings?</h1>
+    <time>25 Jul 2026</time>
+  </div>
+  <img class="col-logo" src="mark-friedmans-fury.png" alt="Friedman’s Fury">
+</div>
+
+<article>
+<p>Last month - and for the first time in its history - New York City froze two-year lease rents. This is great news for 2.4 million New Yorkers currently living in regulated homes, but history is much less encouraging for those who aren't.</p>
+<p>Though Mamdani's 'Freeze the Rent' is unprecedented, the realities faced by (and stories told to) New Yorkers are not new. The city once kept wartime rent controls long after the Second World War had passed. Some benefitted from the newfound affordability, but many found themselves left out and neglected by a system that favoured the few over the many. Rent controls reduced housing supply and pushed unregulated rents higher. You can't escape prices in a free economy.</p>
+<p>Proponents of rent control often point out that landlords can absorb the cap. New buildings are also exempt, so rent freezes do not impose any disincentives to new residential construction. Yet the city's vacancy rate has stayed below 5% for sixty-three years, the level at which the law declares a housing emergency. And New York has rarely upheld such exemptions in the past. Developers lack certainty that the carve-outs offered by Mamdani today will persist in future. So fewer homes are built, and New Yorkers face a new bureaucracy in finding a new home.</p>
+<p>It's hard to believe a permanent emergency could be fixed by a temporary freeze.</p>
+<p><em>You can read Friedman’s 1971 ‘Roofs or Ceilings’ column <a href="https://miltonfriedman.hoover.org/internal/media/dispatcher/214072/full">here</a>.</em></p>
+<section class="datasays">
+<h2>SimonSays?DataSays</h2>
+<img src="media/roofs-or-ceilings-1.png" alt="Roofs or Ceilings?">
+</section>
+</article>
+
+</body>
+</html>

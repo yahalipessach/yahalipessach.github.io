@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Yahali Pessach · Personal AI Operating System</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('../fonts/inter.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#216DB0;
+    font-family:'Inter', Helvetica, Arial, sans-serif;color:#fff;}
+  #stage{position:absolute;inset:0;cursor:grab;}
+  #stage.panning{cursor:grabbing;}
+  svg{width:100%;height:100%;display:block;}
+  .edge{stroke:#fff;fill:none;}
+  .node circle{stroke:rgba(255,255,255,.85);stroke-width:1.2;cursor:pointer;}
+  .node text{fill:#fff;pointer-events:none;user-select:none;}
+  .node text.lhid{display:none;}
+  .node:hover text{display:block;}
+  .node .sub{font-size:8.2px;fill:rgba(255,255,255,.6);}
+  .node .hit{fill:transparent;stroke:none;r:var(--hitr,14px);}
+  .node.dim circle{opacity:.16;} .node.dim text{opacity:.14;}
+  .node.off circle{opacity:.04;pointer-events:none;} .node.off text{opacity:.04;}
+  .edge.dim{opacity:.04;} .edge.off{opacity:.02;}
+  .node.sel circle{stroke:#fff;stroke-width:2.6;}
+  .node.hit circle{stroke:#fff;stroke-width:2.2;}
+  .zone-label{font-size:15px;font-weight:700;fill:rgba(255,255,255,.34);letter-spacing:.14em;pointer-events:none;}
+  #topbar{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;
+    gap:14px;padding:0 18px;background:#216DB0;border-bottom:1px solid rgba(255,255,255,.28);z-index:20;}
+  #topbar .back{color:rgba(255,255,255,.72);font-size:13.5px;text-decoration:none;white-space:nowrap;}
+  #topbar .back:hover{color:#fff;}
+  #topbar h1{font-size:14.5px;font-weight:700;white-space:nowrap;}
+  #topbar h1 .hrt{color:#FF9E9E;}
+  #search{margin-left:auto;width:230px;padding:7px 10px;border:1px solid rgba(255,255,255,.45);border-radius:6px;
+    font-size:12.5px;outline:none;background:transparent;color:#fff;font-family:inherit;}
+  #search::placeholder{color:rgba(255,255,255,.6);}
+  #search:focus{border-color:#fff;}
+  #btnFit{padding:7px 12px;border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:6px;
+    font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  #btnFit:hover{background:#fff;color:#216DB0;}
+  #legend{position:fixed;left:14px;bottom:14px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.30);border-radius:8px;
+    padding:10px 12px;font-size:10.8px;z-index:15;max-height:66vh;overflow-y:auto;width:218px;}
+  #legend .t{font-weight:700;margin-bottom:6px;}
+  .lg{display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer;}
+  .lg .sw{width:10px;height:10px;border-radius:50%;flex:none;}
+  .lg.off{opacity:.28;} .lg:hover{text-decoration:underline;}
+  #legend .keys{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.75);line-height:1.5;}
+  #legend .ln{display:inline-block;width:24px;border-top:1.6px solid #fff;vertical-align:middle;margin-right:5px;}
+  #panel{position:fixed;top:52px;right:0;bottom:0;width:360px;background:#fff;border-left:1px solid #e5e5e5;
+    padding:20px 22px;overflow-y:auto;z-index:18;transform:translateX(100%);transition:transform .18s ease;}
+  #panel.open{transform:none;}
+  #panel .cat{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 8px;border-radius:4px;color:#fff;margin-bottom:9px;}
+  #panel h2{font-size:16.5px;margin-bottom:8px;color:#111;}
+  #panel h3{font-size:10.5px;letter-spacing:.06em;color:#8a8a8a;margin:14px 0 4px;}
+  #panel p,#panel li{font-size:12.3px;line-height:1.55;color:#222;}
+  #panel ul{padding-left:16px;}
+  #panel .rel{cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+  #panel .rel:hover{color:#2563eb;}
+  #closePanel{position:absolute;top:14px;right:14px;border:none;background:none;font-size:18px;cursor:pointer;color:#999;}
+  #closePanel:hover{color:#000;}
+  #hint{position:fixed;bottom:14px;right:16px;font-size:10.5px;color:rgba(255,255,255,.6);z-index:10;text-align:right;line-height:1.55;}
+  #stage,#svg{touch-action:none;}
+  #btnKey{display:none;padding:7px 10px;border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;
+    border-radius:6px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;}
+
+  @media (max-width: 760px){
+    #topbar{gap:8px;padding:0 12px;}
+    #topbar h1{display:none;}
+    #hint{left:0;right:0;bottom:8px;text-align:center;font-size:10px;}
+    #hint br{display:none;}
+    #hint .dk{display:none;}
+    #topbar .back{font-size:12.5px;padding:10px 2px;}
+    #btnFit,#btnKey{padding:8px 9px;font-size:11.5px;}
+    #btnKey{display:block;}
+    #search{margin-left:auto;width:auto;flex:1 1 0;min-width:0;font-size:12px;padding:8px;}
+    #legend{display:none;left:10px;right:10px;bottom:10px;width:auto;max-height:56vh;font-size:12px;
+      background:#1a5c99;border-color:rgba(255,255,255,.5);box-shadow:0 6px 24px rgba(0,0,0,.28);padding:14px 14px 12px;}
+    #legend.open{display:block;}
+    .lg{padding:5px 0;}
+    #legend .sw{width:12px;height:12px;}
+    #panel{width:100%;padding:18px 18px 40px;}
+    #panel p,#panel li{font-size:13.5px;}
+    #closePanel{font-size:24px;padding:6px;top:8px;right:8px;}
+  }
+</style>
+</head>
+<body>
+<div id="topbar">
+  <a class="back" href="../">&larr; Yahali Pessach</a>
+  <button id="btnFit">Fit view</button>
+  <button id="btnKey">Key</button>
+  <h1>Generated with <span class="hrt">♥</span> by Claude.ai.</h1>
+  <input id="search" type="text" placeholder="Search 250+ components">
+</div>
+<div id="stage"><svg id="svg"><g id="view"><g id="zones"></g><g id="edges"></g><g id="nodes"></g></g></svg></div>
+<div id="legend"></div>
+<div id="hint"><span class="dk">drag nodes · drag canvas to pan · scroll to zoom<br></span>drag to pan · pinch to zoom · tap to inspect</div>
+<div id="panel"><button id="closePanel">✕</button><div id="panelBody"></div></div>
+
+<script>
+"use strict";
+/* ============ CATEGORIES ============ */
+const CATS={
+ core:{name:"Core memory & governance",c:"#2563eb"},
+ rules:{name:"Rules & quality standards",c:"#dc2626"},
+ auto:{name:"Automations (scheduled)",c:"#f59e0b"},
+ stage:{name:"Workflow stages",c:"#fbbf24"},
+ skill:{name:"Skills",c:"#10b981"},
+ plugin:{name:"Plugins",c:"#84cc16"},
+ mcp:{name:"Connectors & services",c:"#64748b"},
+ ext:{name:"External surfaces",c:"#0891b2"},
+ pipe:{name:"Application engine",c:"#7c3aed"},
+ web:{name:"Web-era chat clusters",c:"#ec4899"},
+ know:{name:"Knowledge & records",c:"#0ea5e9"},
+ proj:{name:"Projects",c:"#d946ef"},
+ pub:{name:"Publishing system",c:"#f97316"},
+ out:{name:"Output libraries",c:"#14b8a6"},
+ road:{name:"Roadmap (self-generated)",c:"#9ca3af"},
+ dom:{name:"Life domains",c:"#111827"},
+ cowork:{name:"Cowork era surfaces",c:"#6366f1"},
+ venture:{name:"Ventures & spin-offs",c:"#e11d48"}
+};
+/* N(id, name, cat, radius, anchorX, anchorY, description, note) */
+const N=(id,n,cat,r,ax,ay,d,note)=>({id,n,cat,r,ax,ay,d:d||"",note:note||""});
+
+/* ============ NODES ============ */
+const NODES=[
+/* ================= ZONE 1 · EXTERNAL INPUTS (top) ================= */
+N("b_target","TargetJobs","ext",7,-1350,-1980,"One of six boards swept nightly, with de-duplication mechanics."),
+N("b_hand","Handshake","ext",7,-1080,-1930,"Login-walled board; filter quirks documented in the rule ledger."),
+N("b_ucl","University careers portal","ext",7,-810,-1980,"The university vacancy portal, swept via saved facet filters."),
+N("b_trackr","Deadline tracker","ext",7,-540,-1930,"Deadline tracker including the events tab where insight days appear."),
+N("b_bright","BrightNetwork","ext",7,-270,-1980,"Walked by every category facet after a caching lesson."),
+N("b_lijobs","LinkedIn job feed","ext",7,0,-1930,"24-hour finance feed, navigated like a human."),
+N("chrome","The browser gateway","mcp",13,620,-1960,"The authenticated bridge into every login-walled surface: mailbox, LinkedIn, boards, paywalled reading. One rule: a source that cannot be read is reported loudly, never skipped."),
+N("outlook","University mailbox","ext",11,980,-1990,"The outreach mailbox; institutional tenancy means browser-only access, handled by design."),
+N("standby","Follow-up folder","ext",11,1330,-1930,"Every thread awaiting follow-up, filed by hand: deliberately the system of record instead of a rebuilt CRM."),
+N("linkedin","LinkedIn","ext",9,1720,-1985,"Networking surface: outreach, recruiter replies."),
+N("ft","Financial press & economics blogs","ext",8,2050,-1930,"Paywalled reading routed through the browser gateway; the planned awareness feed."),
+N("gmail","Personal inbox (Gmail)","mcp",9,-1750,-1930,"Actionable-mail source for the briefing; destination of the nightly digest."),
+N("gcal","Calendar","mcp",8,-1990,-1980,"Hard commitments feeding the briefing's first ranking layer."),
+N("gdrive","Cloud drive","mcp",8,-2260,-1920,"Bulk reference storage the vault points at rather than copies."),
+N("apollo","Contact-data service","mcp",8,2350,-1980,"Recipient enrichment for the outreach campaign; plan limits documented."),
+N("mcp_reg","Where new tools come from","mcp",7,2620,-1930,"Discovery service for new integrations: how the system grows its own reach."),
+N("mcp_comp","Desktop control","mcp",7,2870,-1980,"Screen-level control of native applications when no cleaner route exists."),
+
+/* ================= ZONE 2 · AUTOMATIONS ================= */
+N("mcp_sched","The scheduler","mcp",9,-120,-1420,"The scheduling service all six automations run on: daily, weekly, on-demand."),
+N("t_weekly","Weekly pulse","auto",15,-1720,-1380,"The system's health check: captures sessions, harvests lessons, lints for drift, rebalances life pillars, pitches upgrades.","The reason the vault stays honest instead of rotting."),
+N("t_brief","Morning brief","auto",14,-820,-1400,"Reads the vault, calendar, two mailboxes and LinkedIn; ranks the day; flags collisions; writes a dated brief.","Being re-tuned after the system's own audit reviewed its cadence."),
+N("t_pipeline","Nightly pipeline","auto",16,480,-1400,"Sweeps six boards end to end, filters with bias-to-include, prepares materials under full rule governance and ships an audited digest. Never submits."),
+N("t_clgo","Letter workflow","skill",9,1850,-1380,"One-tap letter workflow, with the firm research, the rules and the owner's own exemplars pre-loaded."),
+N("t_hvgo","Rehearse an answer","skill",9,2150,-1420,"Paste a practice question and rehearse a structured answer drawn from the owner's own stories."),
+N("spec_brief","Morning brief spec","auto",8,-1080,-1340,"The briefing's authoritative spec: sources, ranking rules, loud-failure requirements."),
+N("spec_weekly","Weekly pulse spec","auto",8,-2020,-1330,"The five-job weekly procedure: capture, harvest, lint, rebalance, pitch."),
+
+/* weekly pulse chain */
+N("wk_capture","1 capture sessions","stage",6,-2280,-1030,"New working sessions are filed into the archive."),
+N("wk_harvest","2 harvest lessons","stage",6,-2060,-980,"Corrections and preferences are mined from the week's conversations."),
+N("wk_lint","3 lint the vault","stage",6,-1840,-1030,"Stale claims, passed deadlines and contradictions are caught against live state."),
+N("wk_rebal","4 rebalance pillars","stage",6,-1620,-980,"Actual attention is compared with the constitution's targets."),
+N("wk_pitch","5 pitch upgrades","stage",6,-1400,-1030,"The top automation opportunities are proposed, ranked by return."),
+/* briefing chain */
+N("br_sweep","1 sweep four sources","stage",6,-1130,-1010,"Calendar, both mailboxes and LinkedIn are read; unreadable sources are flagged loudly."),
+N("br_rank","2 rank the day","stage",6,-910,-960,"Hard commitments first, then discretionary work scored by goal weight and leverage."),
+N("br_watch","3 flag collisions","stage",6,-690,-1010,"Deadline pile-ups and starving goals are surfaced early."),
+N("br_send","4 deliver the brief","stage",6,-470,-960,"A dated brief is written to the archive and emailed to the owner."),
+/* nightly pipeline chain */
+N("np_sweep","1 sweep six boards","stage",6,-160,-1000,"Every board walked to the end; a board that cannot be read is flagged, never skipped."),
+N("np_filter","2 filter to remit","stage",6,60,-950,"Postings filtered against a written remit, with bias to include borderline cases."),
+N("np_elig","3 check eligibility","stage",6,280,-1000,"Degree stage, work rights and programme shape checked per posting."),
+N("np_dedup","4 de-duplicate","stage",6,500,-950,"Seen postings keyed on normalised employer and title so nothing is processed twice."),
+N("np_short","5 shortlist and save","stage",6,720,-1000,"In-remit finds saved with links and deadlines."),
+N("np_tailor","6 prepare materials","stage",6,940,-950,"Top matches get materials prepared for them, with review flags."),
+N("np_digest","7 compose digest","stage",6,1160,-1000,"An audited digest: finds, borderlines, coverage per board, issues in bold."),
+N("np_email","8 self-email","stage",6,1380,-950,"The one permitted send: the digest to the owner's own inbox, verified."),
+N("selfemail","How it emails itself","core",8,1640,-1000,"The battle-tested send procedure: draft, verify, send, confirm."),
+
+/* ================= ZONE 3 · MEMORY, RULES, ENGINE ================= */
+/* core */
+N("claude_md","The Heart","core",16,-90,-430,"The auto-loading bootstrap: any session opened in the vault becomes the orchestrator, with identity, read order and hard gates.","The mechanism that turns a stateless model into a persistent operating system."),
+N("constitution","The constitution","core",13,-380,-500,"Three life pillars, seasonal goal weights, a two-layer prioritisation rule, and a protected floor for the personal pillar."),
+N("dispatch","The front door","core",13,190,-500,"Say what you want; it names the workflow, the context to load first, and the approval gate. One front door."),
+N("routes","Atlas of the system","core",8,-560,-390,"A human-readable map of where every capability lives."),
+N("playbook","The playbook","core",13,-260,-300,"Lessons that span workflows, including how the owner wants to be corrected."),
+N("profile","Verified profile","core",13,330,-350,"Verified education, roles and achievements. Everything starts from here."),
+N("logf","Audit log","core",11,-60,-200,"Append-only history of every decision and correction, with the reasoning attached."),
+N("indexf","Vault catalogue","core",8,-460,-200,"A one-line summary and link for every page; the navigation layer."),
+N("inbox","Drop zone","core",7,-640,-280,"Anything dropped here is swept and filed by the weekly pulse."),
+N("backlog","Upgrade backlog","core",11,140,-190,"A ranked queue of automation opportunities; the system proposes its own upgrades."),
+
+/* goals & records (left) */
+N("g_acad","Academic goals","know",7,-1180,-560,"Research experience, top marks, a best-paper prize, publication."),
+N("g_prof","Professional goals","know",7,-1380,-500,"Two internship routes and the networking engine behind both."),
+N("g_pers","Personal goals","know",7,-1180,-440,"Soft goals held as nudges with a protected floor."),
+N("g_brand","Writing goals","know",7,-1380,-380,"Three columns, four articles each, then promote."),
+N("g_aware","Awareness goals","know",7,-1180,-320,"Intentional reading that feeds outreach with things to say."),
+N("tasks_md","Live task list","know",11,-1050,-190,"Every commitment source-referenced, with closed items marked never to resurface."),
+N("deadlines_md","Hard deadlines","know",10,-1330,-240,"Dated commitments: the first layer of every morning ranking."),
+N("apps_md","Application record","know",10,-1250,-120,"Every application: route, role, materials, status."),
+N("pip_summer","Summer season tracker","know",8,-1530,-160,"Per-firm tracker for the primary application season."),
+N("pip_offcycle","Direct outreach tracker","know",8,-1500,-300,"Tracker for the direct internship route."),
+N("decisions","Restraint log","know",8,-880,-300,"Documented restraint: no duplicate CRM, no cached research; each decision logged with reasons."),
+N("conv_hub","Conversation archive","know",14,-850,-120,"29 filed working sessions plus 187 imported web-era conversations: a year of history, mined weekly for lessons."),
+
+/* rules & standards (right of core) */
+N("ledger","Corrections ledger","rules",17,1000,-480,"Consolidated must-apply rules plus dated corrections. Read at the start of every run: a mistake corrected once can never silently regress.","The case law of the system."),
+N("rule_term","Get the words right","rules",6,1290,-560,"Financial metrics used correctly, always."),
+N("rule_frame","Never inflate a title","rules",6,1460,-490,"Honest seniority framing; fixed naming conventions."),
+N("rule_prose","How sentences are built","rules",6,1290,-420,"Tense, verb diversity, no dashes, no repeated figures."),
+N("rule_elig","Can he actually apply","rules",6,1460,-350,"Work rights, degree shape and programme fit, checked per posting."),
+N("rule_scan","How each board misbehaves","rules",6,1290,-280,"Documented filter quirks and sweep methods per board."),
+N("std_council","Council protocol","rules",9,1230,-120,"Multi-round, multi-agent review; reviewer findings are recorded exactly as returned."),
+
+/* application engine (far right) */
+N("financeapply","The application engine","pipe",11,1950,-560,"The project holding everything career-application related."),
+N("master_cv","The master CV","pipe",13,2200,-620,"The one-page canonical CV. Locked sections, deliberate edits only, backed up before anything is touched."),
+N("plan","Pipeline rules","pipe",10,2450,-560,"The governing plan; wins on conflict. Boards, remit, exclusions, digest format."),
+N("orch","The run instruction","pipe",9,2700,-620,"The self-contained instruction a fired run carries, because a run has no memory."),
+N("council","Reviewer agents","pipe",11,2450,-440,"Independent reviewer agents run in rounds over every draft."),
+N("kb_text","Machine-readable textbooks","pipe",8,1950,-420,"Three full texts in cloud storage, referenced not copied."),
+N("arch_apps","Retired materials","pipe",7,2700,-480,"Earlier materials, versioned and retired."),
+N("firm_research","Fresh firm research","pipe",9,2200,-360,"Verified facts gathered at application time; never cached, because research ages."),
+N("tracker","Campaign tracker (100 firms)","pipe",11,2450,-300,"Status per firm: batch, sent, replied, next step."),
+N("runbook","Outreach campaign runbook","pipe",10,2200,-220,"The per-batch recipe: produce, QC, review, GO, place drafts."),
+N("exemplars","His own approved letters","pipe",8,2700,-340,"The owner's own approved letters, kept as the reference standard."),
+N("out_lib","Forty firm folders","pipe",10,2700,-200,"Forty firm folders, one per approach."),
+N("bespoke","Bespoke application builder","pipe",9,1950,-280,"Long-form questionnaires and covering notes built on verified research, with slots only the owner can fill."),
+
+/* projects (far left) */
+N("p_doing","Private markets research","proj",11,-2150,-560,"Research-assistant work at a university research centre: a 6,000-deal dataset, benchmark counterfactuals, a reproducible pipeline."),
+N("p_pols6","Politics module","proj",6,-2400,-500,"Knowledge graphs and mindmaps built from course themes."),
+N("p_phil","Philosophy module","proj",6,-2150,-440,"Essay work, marked against the official rubric and archived."),
+N("p_pols8","Data analysis module","proj",6,-2400,-380,"Healthcare data coursework, shipped."),
+N("p_journal","Journal project","proj",6,-2150,-320,"Web-era writing project, preserved."),
+N("p_tech","Finance technicals","proj",6,-2400,-260,"Technical study base with its own textbook library."),
+
+/* ================= ZONE 4 · SKILLS & WORKFLOW CHAINS ================= */
+N("s_learn","The teaching engine","skill",9,-2280,180,"Exam teaching via active recall and problem overload; passive re-reading is banned by rule."),
+N("s_consol","Corrections into memory","skill",7,-760,180,"Reflective passes over memory files: merge duplicates, fix stale facts."),
+N("s_skillc","Skill creator","skill",8,-540,120,"Builds and evaluates new skills: the toolkit that extends the toolkit."),
+N("s_theme","Theme factory","skill",7,-320,180,"Styling system for documents and interactive pieces."),
+N("s_webart","Web artifact builder","skill",8,-100,120,"Builds interactive HTML applications: the study tools and this map."),
+N("s_morning","Brief renderer","skill",7,120,180,"Styled rendering for the morning brief."),
+N("s_sched","Recurring job setup","skill",7,340,120,"Creates and updates the scheduled automations."),
+N("s_dr","Deep research","skill",9,780,120,"Multi-source, adversarially verified research for priority applications."),
+N("s_docx","Word documents","skill",9,1000,180,"Word production and editing: CVs, letters, questionnaires."),
+N("s_pdf","PDF documents","skill",8,1220,120,"PDF reading, merging, extraction, forms."),
+N("s_pptx","Slide decks","skill",7,1440,180,"Slide deck production."),
+N("s_xlsx","Spreadsheets","skill",7,1660,120,"Spreadsheet building and cleaning, campaign trackers included."),
+N("s_cv","Adapt the CV","skill",15,1900,180,"The engine that adapts the CV to a specific role, with the layout and the verified record both held fixed."),
+N("s_cl","Cover letter workflow","skill",13,2140,120,"Maps the person specification, researches the firm and anchors motivation in a real named person, working from the owner's own material."),
+N("s_hv","Rehearse out loud","skill",12,2380,180,"Rehearsal support for timed video interviews: structuring practice answers from the owner's real experiences, with live market context."),
+N("dossier","Interview story bank","skill",12,2620,120,"Adaptable true stories indexed against roughly 100 interview questions; doubles as the hook source for letters."),
+
+/* study chain (left) */
+N("st_ingest","1 ingest course materials","stage",6,-2450,480,"Module notes and papers are read into the system."),
+N("st_drill","2 generate drills","stage",6,-2230,530,"Problem sets are generated, escalating in difficulty."),
+N("st_recall","3 active recall","stage",6,-2010,480,"Practice by retrieval, never by re-reading."),
+N("st_spaced","4 track weak spots","stage",6,-1790,530,"Misses feed the next session's drills."),
+N("p_e6","Maths for economists","proj",11,-2280,760,"The summer maths module, with its own materials, plan and purpose-built study tools."),
+N("p_e2","First-year economics library","proj",8,-2540,820,"Cheatsheets, past papers and mark schemes feeding the exam system."),
+N("af_drill","Drill engine","out",8,-2100,850,"Interactive spaced-practice problem drills generated from course materials."),
+N("af_map","Concept map","out",7,-2320,930,"A clickable map of the module's structure."),
+N("af_shapes","Function explorer","out",7,-2080,990,"An interactive intuition-builder for functional forms."),
+N("af_cheat","Live cheatsheet","out",7,-2500,990,"The condensed module, browsable."),
+
+/* publishing system (centre-left) */
+N("writing_style","Letter structure","rules",11,1660,-40,"The cover letter's structure: a four-move chained narrative the owner fills with his own claims."),
+N("colw_idea","1 observation","stage",6,-1830,480,"A market observation worth complicating."),
+N("colw_data","2 data work","stage",6,-1610,530,"The claim is tested against real data; only verified series are used."),
+N("colw_pub","3 publish","stage",6,-950,480,"The piece ships to the personal site."),
+N("colw_loop","4 lessons loop back","stage",6,-730,530,"What the piece taught rejoins the method."),
+N("col_price","What prices imply","pub",9,-1750,720,"Reads what prices imply against the popular narrative."),
+N("col_fury","Who captures the value","pub",9,-1500,780,"Regulation, market design and who captures value."),
+N("col_data","Claims tested against data","pub",9,-1250,720,"Claims tested against real panels, honest about null results."),
+N("pub_live","Published pieces","pub",8,-1000,780,"The live articles on the personal site."),
+N("pub_drafts","Finished drafts in edit","pub",8,-810,700,"His completed pieces awaiting placement."),
+N("website","Personal site","ext",9,-1080,920,"Where the columns publish."),
+
+/* CV chain */
+
+/* CL chain */
+N("cls_research","1 research the firm","stage",6,1500,780,"Fresh, verified research; the firm's own deals, correctly attributed."),
+N("cls_spec","2 map the person spec","stage",6,1720,830,"What the employer is really recruiting for."),
+N("cls_anchor","3 choose a real anchor","stage",6,1940,780,"A genuine person or engagement from the owner's own record."),
+N("cls_skeleton","4 build the structure","stage",6,2160,830,"The four-move chained narrative, followed move for move."),
+
+/* interview chain */
+N("hvs_classify","1 classify the question","stage",6,350,480,"Behavioural, motivation, situational or markets."),
+N("hvs_cluster","2 match story cluster","stage",6,570,530,"The question maps to one of 19 clusters and its story."),
+N("hvs_angle","3 match the story","stage",6,790,480,"One true story, matched to what the role values."),
+N("hvs_time","4 rehearse to time","stage",6,1010,530,"Practice pacing at 120 words a minute, no padding."),
+N("hvs_live","5 refresh market facts","stage",6,230,650,"Live data only; the bank holds framing, never stale numbers."),
+
+/* campaign chain */
+N("cam_filter","1 filter target firms","stage",6,1350,1080,"A hundred firms filtered by fit and mandate."),
+N("cam_research","2 research each firm","stage",6,1570,1130,"Per-firm research done fresh for every batch."),
+N("cam_draft","3 prepare the approach","stage",6,1790,1080,"A closely researched pair per firm."),
+N("cam_qc","4 quality gauntlet","stage",6,2010,1130,"Accuracy checks, coherence checks and consistency checks per batch."),
+N("cam_go","5 owner says go","stage",6,2230,1080,"Nothing moves without an explicit approval per batch."),
+N("cam_place","6 place mail drafts","stage",6,2450,1130,"Drafts are built in the owner's mailbox via the browser."),
+N("cam_send","7 owner sends","stage",6,2670,1080,"The send is always human."),
+N("cam_track","8 track replies","stage",6,2890,1130,"Replies land in the follow-up folder and the tracker."),
+
+/* ================= ZONE 5 · CONVERSATIONS & OUTPUTS ================= */
+/* sessions cloud */
+/* web clusters */
+N("w_interview","Interview prep chats","web",9,-1850,1250,"Around twenty conversations of technical prep and interview strategy."),
+N("w_outreach","Outreach chats","web",9,-1630,1300,"Around twenty-five conversations refining professional outreach."),
+N("w_course","Coursework chats","web",9,-1850,1400,"Around thirty conversations across three subjects."),
+N("w_markets","Markets analysis chats","web",9,-1630,1450,"Around twenty-five conversations working through market questions."),
+N("w_site","Site build chats","web",8,-1630,1600,"Building the personal website and branding."),
+N("w_study","Revision chats","web",8,-1850,1700,"Exam revision and study systems."),
+N("w_admin","Logistics chats","web",8,-1630,1750,"University administration handled."),
+/* output libraries */
+N("o_verdicts","Council verdicts","out",8,920,1330,"The real reviewer-agent findings per run."),
+N("o_digests","Nightly digests","out",8,700,1430,"The audited nightly outputs, emailed and archived."),
+N("o_briefs","Morning briefs","out",8,920,1480,"Dated briefs: the system's rendered judgement each morning."),
+N("o_weekly","Weekly reviews","out",8,700,1580,"The self-audit's findings, week by week."),
+N("map_self","This map, first version","out",9,920,1630,"A standalone interactive audit of the whole system, built by the system.","Built with the web-artifacts skill from a full-ecosystem sweep."),
+/* roadmap */
+N("r_live","Make runs prove themselves","road",8,2050,1400,"Every automation must prove it ran; the system's own top pitch."),
+N("r_recon","Sync replies automatically","road",7,2300,1350,"Auto-sync the campaign tracker from the mailbox."),
+N("r_deadline","Deadlines flow in","road",7,2050,1550,"Digest deadlines flow automatically into the deadline record."),
+N("r_ra","Outreach for academia","road",8,2300,1500,"Clone the proven campaign machinery for research networking."),
+N("r_aware","Reading into talking points","road",7,2050,1700,"Daily reading distilled into outreach talking points."),
+/* plugins */
+N("pl_prod","Productivity plugin","plugin",7,-2550,1250,"Off-the-shelf memory plugin, outgrown by the purpose-built vault."),
+N("pl_fin","Accounting plugin","plugin",7,-2550,1400,"Corporate-accounting toolkit, consciously not adopted."),
+N("pl_pdfv","PDF viewer plugin","plugin",7,-2550,1550,"Interactive PDF annotation and signing."),
+N("pl_cpm","Plugin management","plugin",7,-2550,1700,"Creates and customises plugins: meta-infrastructure."),
+
+/* ---- secondary & tertiary components ---- */
+N("route_app","Start an application","core",6,340,-640,"Dispatch entry: loads the profile, the rules and the record, then hands over to the application workflow."),
+N("route_meet","Prepare for a meeting","core",6,560,-680,"Dispatch entry: gathers the thread history, firm research and relevant stories into a briefing."),
+N("route_today","What matters today","core",6,120,-680,"Dispatch entry: runs the briefing logic on demand."),
+N("route_corr","Record a correction","core",6,520,-580,"Dispatch entry: feedback is written to the right file immediately, never just acknowledged."),
+N("mode_seasonal","Seasonal modes","core",7,-660,-640,"Term-time, exam and application-season weightings that retune priorities by calendar."),
+N("rule_priority","Two-layer ranking rule","core",7,-880,-580,"Hard commitments first; discretionary work scored by goal weight and leverage."),
+N("rule_floor","The personal floor","core",7,-660,-540,"A protected minimum for personal goals so crunch periods never zero them out."),
+N("reg_closed","Closed matters","know",7,-1080,-40,"Deliberately closed matters, recorded so no future session helpfully reopens them."),
+N("reg_settled","Settled facts","know",7,-1330,0,"Verified facts that must not be re-questioned or re-litigated."),
+N("remit_def","The remit","know",7,60,-840,"The written scope of which roles are in and out, with borderline cases surfaced rather than dropped."),
+N("seen_mem","Every posting already seen","pipe",7,520,-840,"Normalised keys for every processed posting so nothing is handled twice."),
+N("digest_spec","Digest format","pipe",7,1180,-840,"The digest's required structure: finds, borderlines, per-board coverage, issues in bold at the top."),
+N("cam_template","Outreach email structure","pipe",7,1130,1230,"The campaign email's structure, built from the owner's own approved examples."),
+N("cam_recip","Finding the right person","pipe",7,1130,1350,"Finding the right person per firm, using the contact-data service and public pages."),
+N("cam_cadence","Batch cadence","pipe",6,1350,1430,"Pilot first, then larger batches once tone is stable."),
+N("hv_clusters","Question clusters (19 themes)","skill",7,2680,320,"Around one hundred interview questions grouped into nineteen themed clusters."),
+N("hv_build","Story-bank practice mode","skill",7,2440,360,"Practice workflow for developing the story bank cluster by cluster."),
+N("st_papers","Past-paper bank","proj",7,-2640,560,"Collected past papers and official mark schemes driving the drill sets."),
+N("st_plan","Revision plan","proj",7,-2640,700,"The structured schedule the study loop executes."),
+N("pub_chart","Chart house style","pub",7,-700,620,"Minimal charts: labelled axes, one context callout, a source line, nothing decorative."),
+N("pub_source","A source note always","pub",7,-540,700,"Each piece closes with a link to the underlying paper or document."),
+N("export_meta","Raw archive records","know",7,-660,-40,"The imported conversation archive's raw records, preserved alongside readable transcripts."),
+N("word_mcp","Office bridge (Word)","mcp",7,2950,-560,"Native Word control used for document assembly and layout verification."),
+N("pl_pdft","PDF fill and sign","plugin",7,-2550,1850,"Form-filling and signature placement for application paperwork."),
+N("wk_propose","6 propose rule edits","stage",6,-1180,-980,"Harvested lessons become proposed rule changes; the owner approves before anything binding is written."),
+N("br_log","5 log the run","stage",6,-250,-1010,"Each briefing appends its one-line record to the audit log."),
+N("o_besp","Bespoke applications","out",8,700,1780,"Completed questionnaires and covering notes, archived per firm."),
+
+/* ================= ZONE 6 · DOMAINS ================= */
+N("d_career","Career","dom",10,1450,1950,"Two application routes, interview prep, networking, commercial awareness."),
+N("d_acad","Academic","dom",10,-1450,1980,"Exam preparation, research work, the future research-assistant goal."),
+N("d_write","Writing and brand","dom",9,-500,1990,"Three columns, the site, and the standards that keep the work his own."),
+N("d_pers","Personal","dom",8,500,1990,"Soft goals with a protected floor; reminded, never crowded out."),
+/* ================= ZONE 7 - THE COWORK ERA (Aug 2026 rescan) ================= */
+/* -- Cowork surface -- */
+N("cw_sess","Cowork session (cloud sandbox)","cowork",15,-2400,2420,"A Linux workspace in the cloud that keeps its files, packages and state across a whole working day."),
+N("cw_ws","Persistent workspace","cowork",8,-2620,2620,"Scratch space, installed tools and build output that survive between turns."),
+N("cw_tasks","Live task list","cowork",7,-2380,2680,"Work is broken into tracked tasks the owner can watch advance."),
+N("cw_files","File delivery to chat","cowork",7,-2120,2620,"Finished artefacts are handed straight back into the conversation."),
+N("cw_bridge","Device bridge","cowork",13,-1820,2420,"A sandboxed Linux VM on the owner machine with chosen folders mounted read-write."),
+N("cw_mount","Mounted folder","cowork",7,-2020,2660,"Only the folders explicitly granted are visible; nothing else on the machine is reachable."),
+N("cw_shell","Shell on the owner machine","cowork",8,-1780,2690,"Work happens where the files already live instead of shuttling copies to the cloud."),
+N("cw_stage","Stage and commit","cowork",7,-1540,2640,"The narrow path for moving a file between the two machines, used only when a step demands it."),
+N("cw_pane","Built-in browser pane","cowork",8,-1300,2420,"A browser inside the app with its own signed-in profile, separate from the owner Chrome."),
+N("cw_agents","Subagents","cowork",11,-1080,2620,"Parallel researchers dispatched for wide sweeps; only their conclusions come back."),
+N("cw_flows","Multi-agent workflows","cowork",9,-1300,2690,"Scripted fan-out across many agents when one pass is not enough."),
+N("cw_art","Published artifacts","cowork",12,-860,2420,"Private hosted pages with their own URL, updatable in place and shareable when chosen."),
+N("cw_artcap","Artifact capabilities","cowork",7,-640,2640,"Pages that can remember what visitors do, hold shared state, or ask Claude a question of their own."),
+
+/* -- Memory filesystem -- */
+N("mem_fs","Memory filesystem","core",14,-260,2420,"Durable notes about the owner that follow him across every Claude surface, written as he works rather than on request."),
+N("mem_prof","Profile memory","know",7,-460,2650,"Who he is at the level that stays true for months."),
+N("mem_pref","Preference memory","know",6,-260,2700,"How he wants Claude to behave: brevity, format, depth."),
+N("mem_area","Project memory","know",7,-40,2650,"Live involvements: the website, TutorYaya, Abscission, 1000FreePints."),
+N("mem_ppl","People memory","know",6,180,2700,"Relationship context for the people who recur in his work."),
+N("mem_top","Topic memory","know",7,380,2650,"Academic work, recent work, writing - filed by domain."),
+N("mem_cross","Cross-surface recall","core",7,120,2420,"A fact stated in one place surfaces in another, weeks later, without being repeated."),
+
+/* -- Modes and cadence -- */
+N("md_hub","The modes system","core",14,900,2420,"Named states that set how the week is spent, each carrying an explicit three-way split."),
+N("md_summer","Summer reset mode","core",7,660,2640,"Academic 30, professional 45, social 25 - the resting state between seasons."),
+N("md_resit","Resit override mode","core",6,880,2700,"A temporary modifier pulling academic up until the exam is done."),
+N("md_burst","Application burst mode","core",9,1120,2640,"Academic 25, professional 60, social 15 - the state the system enters when an application season opens."),
+N("md_split","Three-pillar split","core",8,1340,2420,"Every mode states its own allocation, and every day is audited against it."),
+N("md_floor","The social floor","rules",10,1560,2620,"Fifteen per cent, treated as a rule and not a target - and reported breached, honestly, week after week."),
+N("md_bal","Balance audit","stage",7,1340,2700,"The closing section of every brief: where attention actually went."),
+
+/* -- Delta -- */
+
+/* -- Pipeline evolution -- */
+N("pl_a","Track A nightly scan","pipe",13,-2400,2960,"The nightly board sweep and the work that follows it."),
+N("pl_b","Track B cold outreach","pipe",10,-2400,3160,"Twenty firms at a time drafted into the mailbox and ranked; dormant whenever the nightly scan is carrying the season."),
+N("pl_remit","Data roles now count","rules",9,-2120,2900,"Data science and quantitative-data internships became in-remit in any sector, as their own pool beside finance."),
+N("pl_offc","Off-cycle classifier","rules",7,-2120,3120,"One board tab was made authoritative for summer-versus-off-cycle, overriding what a posting claims."),
+N("pl_event","Event-first front door","pipe",8,-1840,2960,"A programme entered by attending first and being invited to apply, rather than by applying."),
+N("pl_runs","Per-run folder","know",7,-1560,2900,"Every run writes its own dated folder, so any night can be reopened and audited."),
+N("pl_seen","Disposition ledger","know",9,-1560,3120,"Every exclusion is written down with its reason, so nothing returns later pretending to be new."),
+
+/* -- The council -- */
+N("co_hub","The council","rules",15,-500,2960,"Three adversarial reviewers argue over every document before it is allowed out."),
+N("co_ats","The screener","rules",8,-760,3140,"Reads the document the way an applicant tracking system would."),
+N("co_hm","The hiring manager","rules",8,-500,3200,"Reads it the way the person deciding would."),
+N("co_pess","The pessimist","rules",8,-240,3140,"Looks only for what will not survive contact with a sceptic."),
+N("co_verdict","Pass or revise","stage",7,-20,2960,"Verdicts are recorded, not summarised."),
+N("co_cap","Round cap","rules",6,180,3140,"Three rounds, then it ships or it stops - argument is bounded."),
+N("co_rev","Logged reversals","know",7,420,2960,"Agents withdraw and reverse their own objections once shown why, and that is written down too."),
+
+/* -- Drive reality -- */
+N("dr_todo","The control file","know",12,1400,2960,"One long document holding the running to-do list, the retrospectives and the next build."),
+N("dr_cl","The letter knowledge base","skill",8,1420,3200,"Research method, the rule that motivation must anchor to a real named person, and a bank of recurring questions."),
+N("dr_draw","The architecture drawing","know",7,1660,3160,"A hand-drawn sketch of the whole system, still consulted a year on."),
+N("dr_books","Finance reference corpus","know",8,1900,2960,"Six textbooks held twice - once to read, once as plain text for the model."),
+N("dr_scrape","Season market scrape","know",9,2140,3140,"The whole internship market for the coming year pulled into one sheet with dates and requirements."),
+N("dr_out","Outreach letter library","out",8,2380,2960,"Sixteen individually researched invitations, each anchored to something the recipient actually did."),
+N("dr_hv","Interview answer banks","out",8,2620,3140,"Spoken-style answers built from his own stories, rebuilt per firm."),
+N("dr_brief","Firm and interview briefs","out",9,2860,2960,"Around thirty firm-specific preparation documents accumulated across the year."),
+
+/* -- Ventures and spin-offs -- */
+N("v_doric","A client wants this","venture",13,-2560,3420,"The first time the system was offered to someone else: a firm asking for the outreach machinery as a product."),
+N("v_recur","Recursive-feedback skill","venture",9,-2300,3560,"A proposed skill that keeps a model of the owner and a record of corrections, refreshed every morning."),
+N("v_pints","1000 Free Pints","venture",10,-2040,3420,"A venture concept built out to a brand and a business model."),
+N("v_tutor","TutorYaya","venture",9,-1780,3560,"The tutoring operation - tutors, students across several countries, weekly workshops."),
+N("v_demo","Demo site","venture",7,-1520,3420,"A public sandbox used to show clients what the machinery can do."),
+
+/* -- New tooling -- */
+N("nt_design","Design canvas","skill",7,900,3560,"Multi-artboard visual design refined by hand rather than in code."),
+N("nt_viz","Chart system","skill",8,1140,3420,"One house style for every chart, in any medium."),
+N("nt_artd","Artifact design","skill",7,1380,3560,"How a published page should be built before a line of it is written."),
+N("nt_wf","Workflow authoring","skill",7,1620,3420,"How to script a fan-out across many agents."),
+N("nt_imp","Memory import","skill",6,1860,3560,"Bringing a memory export from another assistant in as data."),
+
+/* -- The site -- */
+N("st_ssds","SimonSays?DataSays","pub",10,2540,3560,"The chart section that closes every piece."),
+N("st_prev","Preview loop","cowork",8,2780,3420,"A working copy on the owner desktop and a branch behind it, so a change can be seen before it is published."),
+N("st_map","This map, on the site","out",9,2980,3560,"Published at claude-flow so the system can be shown rather than described."),
+/* ================= REASONING HEURISTICS ================= */
+N("hx_hub","The heuristics it argues with","rules",15,2020,-540,"A named set of thinking tools the system is held to, so a fluent answer is not mistaken for a correct one.","Written to counteract a model that would rather agree than be right."),
+N("hx_occam","Occam's razor","rules",8,2330,-400,"Prefer the account that needs the fewest moving parts."),
+N("hx_mdl","Shortest description wins","rules",7,1930,-330,"Between two explanations that fit, the more compressible one is likelier."),
+N("hx_hitch","Hitchens's razor","rules",8,2380,-190,"What arrives without evidence can leave without it."),
+N("hx_popper","Popper's falsifiability","rules",9,1980,-120,"A claim that forbids nothing explains nothing; state the test that could fail."),
+N("hx_sagan","Sagan standard","rules",8,2400,10,"Extraordinary claims carry an extraordinary burden of proof."),
+N("hx_bayes","Bayesian updating","rules",9,2060,80,"Move by the weight of the evidence, not by the confidence of the last thing said."),
+N("wk_fullday","Planning around a full day","core",12,2200,2500,"When the weekdays stop being free, every assumption behind the outreach machine has to be restated rather than quietly broken.","The system re-planned itself instead of pretending nothing changed.")
+];
+
+/* ============ EDGES (s feeds t) ============ */
+const E=(s,t,w,inf)=>[s,t,w||1,inf?1:0];
+
+const EDGES=[
+/* inputs into automations */
+E("b_target","np_sweep",2),E("b_hand","np_sweep",2),E("b_ucl","np_sweep",2),E("b_trackr","np_sweep",2),E("b_bright","np_sweep",2),E("b_lijobs","np_sweep",2),
+E("chrome","b_hand",1),E("chrome","b_ucl",1),E("chrome","b_lijobs",1),E("chrome","outlook",3),E("chrome","linkedin",3),E("chrome","ft",2),
+E("gmail","br_sweep",2),E("gcal","br_sweep",2),E("outlook","br_sweep",2),E("standby","br_sweep",3),E("linkedin","br_sweep",2),
+E("outlook","standby",2),E("apollo","cam_research",1),E("gdrive","kb_text",2),
+E("mcp_sched","t_pipeline",2),E("mcp_sched","t_brief",2),E("mcp_sched","t_weekly",2),E("mcp_reg","apollo",1,1),E("mcp_comp","outlook",1,1),
+/* automation chains */
+E("t_weekly","wk_capture",2),E("wk_capture","wk_harvest",2),E("wk_harvest","wk_lint",2),E("wk_lint","wk_rebal",2),E("wk_rebal","wk_pitch",2),
+E("spec_weekly","t_weekly",3),E("conv_hub","wk_capture",3),E("wk_harvest","playbook",2),E("wk_harvest","ledger",1,1),E("wk_lint","tasks_md",2),E("wk_pitch","backlog",2),E("wk_rebal","constitution",1),E("t_weekly","o_weekly",2),E("wk_capture","logf",1),
+E("t_brief","br_sweep",2),E("br_sweep","br_rank",2),E("br_rank","br_watch",2),E("br_watch","br_send",2),
+E("spec_brief","t_brief",3),E("tasks_md","br_rank",3),E("deadlines_md","br_rank",3),E("constitution","br_rank",2),E("br_send","o_briefs",2),E("br_send","gmail",1),E("s_morning","br_send",1),
+E("t_pipeline","np_sweep",2),E("np_sweep","np_filter",2),E("np_filter","np_elig",2),E("np_elig","np_dedup",2),E("np_dedup","np_short",2),E("np_short","np_tailor",2),E("np_tailor","np_digest",2),E("np_digest","np_email",2),
+E("plan","t_pipeline",3),E("orch","t_pipeline",3),E("rule_scan","np_sweep",2),E("rule_elig","np_elig",2),E("np_email","selfemail",2),E("selfemail","gmail",2),E("np_digest","o_digests",2),E("np_short","deadlines_md",1,1),E("np_tailor","s_cv",2),
+/* core wiring */
+E("constitution","claude_md",3),E("dispatch","claude_md",3),E("playbook","claude_md",2),E("routes","claude_md",1),E("indexf","claude_md",1),
+E("g_acad","constitution",2),E("g_prof","constitution",2),E("g_pers","constitution",2),E("g_brand","constitution",1),E("g_aware","constitution",1),
+E("claude_md","t_brief",2),E("claude_md","t_weekly",2),E("claude_md","t_clgo",2),E("claude_md","t_hvgo",1),
+E("inbox","wk_capture",1),E("logf","wk_lint",1),E("decisions","standby",1,1),E("decisions","firm_research",1,1),
+/* rules to consumers */
+E("ledger","rule_term",2),E("ledger","rule_frame",2),E("ledger","rule_prose",2),E("ledger","rule_elig",2),E("ledger","rule_scan",2),
+E("ledger","t_pipeline",3),E("ledger","t_clgo",3),E("ledger","s_cv",3),E("ledger","runbook",2),E("std_council","council",2),
+/* profile and cv */
+E("master_cv","profile",2),E("master_cv","s_cv",3),E("profile","s_cv",3),E("profile","s_cl",3),E("profile","s_hv",2),E("profile","bespoke",2),
+E("p_doing","profile",2),E("kb_text","p_tech",1),E("kb_text","financeapply",1),
+E("financeapply","runbook",2),E("financeapply","plan",1),E("financeapply","arch_apps",1),
+/* command routes */
+E("t_clgo","s_cl",2),E("t_hvgo","s_hv",2),E("dispatch","t_clgo",1),E("dispatch","t_hvgo",1),
+/* cv chain */
+E("s_docx","s_cv",2),
+/* cl chain */
+E("s_cl","cls_research",2),E("cls_research","cls_spec",2),E("cls_spec","cls_anchor",2),E("cls_anchor","cls_skeleton",2),
+E("writing_style","cls_skeleton",3),E("exemplars","writing_style",1),E("s_dr","cls_research",2),E("s_dr","firm_research",2),E("firm_research","cls_research",2),E("firm_research","bespoke",2),E("dossier","cls_anchor",2),E("s_docx","bespoke",2),E("bespoke","apps_md",1,1),
+/* interview chain */
+E("s_hv","hvs_classify",2),E("hvs_classify","hvs_cluster",2),E("hvs_cluster","hvs_angle",2),E("hvs_angle","hvs_time",2),E("hvs_classify","hvs_live",1),
+E("dossier","hvs_cluster",3),E("ft","hvs_live",1,1),
+/* campaign chain */
+E("runbook","cam_filter",2),E("cam_filter","cam_research",2),E("cam_research","cam_draft",2),E("cam_draft","cam_qc",2),E("cam_qc","cam_go",2),E("cam_go","cam_place",2),E("cam_place","cam_send",2),E("cam_send","cam_track",2),
+E("s_cv","cam_draft",2),E("writing_style","cam_draft",2),E("tracker","cam_filter",2),E("cam_track","tracker",2),E("cam_track","standby",2),E("cam_place","outlook",2),E("cam_draft","out_lib",2),E("tracker","pip_offcycle",1),E("apps_md","pip_summer",1),E("s_xlsx","tracker",1),
+/* study system */
+E("s_learn","st_ingest",2),E("st_ingest","st_drill",2),E("st_drill","st_recall",2),E("st_recall","st_spaced",2),E("st_spaced","st_drill",1),
+E("p_e6","st_ingest",2),E("p_e2","p_e6",2),E("s_webart","af_drill",2),E("p_e6","af_drill",2),E("p_e6","af_map",2),E("p_e6","af_shapes",2),E("p_e6","af_cheat",2),E("af_drill","st_recall",1),
+/* publishing chain */
+E("colw_idea","colw_data",2),E("colw_pub","colw_loop",2),
+E("ft","colw_idea",1,1),
+E("colw_pub","pub_live",2),E("col_price","pub_live",1),E("col_fury","pub_live",1),E("col_data","pub_drafts",1),E("pub_live","website",2),E("pub_drafts","website",1,1),
+/* sessions feed systems */
+,
+,
+,,,,,
+,,
+,
+/* web clusters feed systems */
+E("w_interview","dossier",2),E("w_interview","s_hv",1),E("w_outreach","writing_style",2),E("w_outreach","standby",1),
+E("w_course","p_pols6",1),E("w_course","p_phil",1),E("w_markets","colw_idea",2),
+E("w_site","website",2),E("w_study","p_e2",1),E("w_admin","tasks_md",1),E("w_markets","conv_hub",1),E("w_course","conv_hub",1),
+/* meta skills */
+E("s_skillc","s_cv",1,1),E("s_consol","playbook",1,1),E("s_sched","mcp_sched",2),E("s_theme","map_self",1),E("s_webart","map_self",2),E("s_pptx","bespoke",1,1),
+E("pl_prod","tasks_md",1,1),E("pl_fin","financeapply",1,1),E("pl_pdfv","s_pdf",1,1),E("pl_cpm","s_skillc",1,1),
+/* roadmap */
+E("backlog","r_live",2,1),E("backlog","r_recon",1,1),E("backlog","r_deadline",1,1),E("backlog","r_ra",2,1),E("backlog","r_aware",1,1),
+E("r_ra","runbook",1,1),E("r_aware","ft",1,1),E("r_aware","g_aware",1,1),E("r_recon","tracker",1,1),E("r_deadline","deadlines_md",1,1),E("r_live","mcp_sched",1,1),
+/* secondary wiring */
+E("dispatch","route_app",2),E("dispatch","route_meet",1),E("dispatch","route_today",1),E("dispatch","route_corr",1),E("route_app","t_clgo",1),E("route_meet","firm_research",1),E("route_meet","dossier",1),E("route_today","t_brief",1),E("route_corr","ledger",1),E("route_corr","logf",1),
+E("mode_seasonal","constitution",2),E("rule_priority","br_rank",2),E("rule_floor","wk_rebal",1),E("rule_floor","d_pers",1),
+E("reg_closed","br_rank",1),E("reg_settled","wk_lint",1),E("reg_closed","tasks_md",1),E("reg_settled","tasks_md",1),
+E("remit_def","np_filter",2),E("seen_mem","np_dedup",2),E("np_short","seen_mem",1),E("digest_spec","np_digest",2),
+E("writing_style","cam_template",2),E("cam_template","cam_draft",2),E("apollo","cam_recip",1),E("cam_recip","cam_place",2),E("cam_cadence","cam_go",1),
+E("dossier","hv_clusters",1),E("hv_clusters","hvs_cluster",2),E("hv_build","dossier",2),E("w_interview","hv_build",1),
+E("st_papers","st_drill",2),E("p_e2","st_papers",1),E("st_plan","st_ingest",2),
+E("pub_chart","colw_data",1),E("pub_source","colw_pub",1),
+E("export_meta","conv_hub",1),E("word_mcp","s_docx",1),E("word_mcp","master_cv",1,1),E("pl_pdft","s_pdf",1,1),
+E("wk_harvest","wk_propose",2),E("wk_propose","ledger",2,1),E("br_send","br_log",1),E("br_log","logf",1),
+E("bespoke","o_besp",2),E("o_besp","d_career",1),
+/* domains */
+E("cam_track","d_career",1),E("dossier","d_career",1),E("bespoke","d_career",1),
+E("p_e6","d_acad",2),E("p_doing","d_acad",2),E("r_ra","d_acad",1,1),E("st_recall","d_acad",1),
+E("pub_live","d_write",2),E("website","d_write",1),E("d_write","d_career",1,1),
+E("br_send","d_pers",1),E("constitution","d_pers",1),E("g_pers","d_pers",1),
+/* ---- zone 7: cowork era ---- */
+E("cw_sess","cw_ws",2),E("cw_sess","cw_tasks",2),E("cw_sess","cw_files",2),E("cw_sess","cw_agents",2),E("cw_sess","cw_flows",2),E("cw_sess","cw_art",2),
+E("cw_bridge","cw_mount",2),E("cw_bridge","cw_shell",2),E("cw_bridge","cw_stage",2),E("cw_sess","cw_bridge",3),E("cw_stage","cw_ws",1),
+E("cw_pane","chrome",1,1),E("cw_bridge","mcp_comp",1,1),E("cw_art","cw_artcap",2),E("cw_agents","cw_sess",1),
+E("cw_sess","st_prev",2),E("st_prev","website",2),E("cw_art","st_map",2),E("st_map","website",2),
+E("mem_fs","mem_prof",2),E("mem_fs","mem_pref",2),E("mem_fs","mem_area",2),E("mem_fs","mem_ppl",2),E("mem_fs","mem_top",2),E("mem_fs","mem_cross",2),
+E("mem_fs","claude_md",1,1),E("mem_prof","profile",1,1),E("mem_cross","cw_sess",1),E("mem_fs","s_consol",1,1),
+E("md_hub","md_summer",2),E("md_hub","md_resit",2),E("md_hub","md_burst",2),E("md_hub","md_split",2),E("md_split","md_floor",2),E("md_split","md_bal",2),
+E("md_hub","mode_seasonal",1,1),E("md_floor","rule_floor",1,1),E("md_bal","br_watch",1),E("t_brief","md_bal",2),
+E("t_pipeline","pl_a",3),E("t_pipeline","pl_b",3),E("pl_a","pl_remit",2),E("pl_a","pl_offc",2),E("pl_a","pl_event",2),
+E("pl_a","pl_runs",2),E("pl_a","pl_seen",2),E("pl_seen","seen_mem",1,1),E("pl_b","cam_track",1,1),
+E("np_tailor","co_hub",2),E("co_hub","co_ats",2),E("co_hub","co_hm",2),E("co_hub","co_pess",2),E("co_hub","co_verdict",2),E("co_hub","co_cap",2),
+E("co_hub","co_rev",2),E("co_hub","council",1,1),E("co_verdict","o_verdicts",1),
+E("dr_todo","backlog",1),E("dr_todo","tasks_md",1),E("dr_cl","s_cl",1,1),E("dr_draw","routes",1,1),
+E("dr_books","kb_text",1,1),E("dr_scrape","pl_a",1),E("dr_out","cam_draft",1),E("dr_hv","s_hv",1,1),E("dr_brief","cam_research",1),
+E("gdrive","dr_todo",2),E("gdrive","dr_scrape",2),E("gdrive","dr_books",2),
+E("v_doric","co_hub",1),E("v_doric","runbook",1),E("v_recur","mem_fs",1),E("v_pints","d_write",1),E("v_tutor","d_pers",1),E("v_doric","v_demo",2),E("cw_sess","nt_design",1),E("cw_sess","nt_viz",1),
+E("cw_art","nt_artd",2),E("cw_flows","nt_wf",2),E("mem_fs","nt_imp",1),E("nt_viz","pub_chart",1),,E("st_ssds","col_data",1,1),
+E("hx_hub","hx_occam",2),E("hx_hub","hx_mdl",2),E("hx_hub","hx_hitch",2),E("hx_hub","hx_popper",2),E("hx_hub","hx_sagan",2),E("hx_hub","hx_bayes",2),
+E("hx_hub","co_hub",2),E("hx_hub","ledger",2),E("hx_hub","claude_md",2),E("v_recur","hx_hub",2),E("hx_hub","council",1),E("hx_popper","std_council",1),
+E("wk_fullday","md_hub",2),E("wk_fullday","md_burst",2),E("wk_fullday","constitution",2),E("wk_fullday","pl_b",1),E("wk_fullday","t_brief",1),
+E("colw_data","colw_pub",2)
+];
+
+/* zone labels */
+const ZONES=[
+ {t:"EXTERNAL INPUTS",x:0,y:-2150},
+ {t:"AUTOMATIONS · THE HEARTBEAT",x:0,y:-1600},
+ {t:"MEMORY · RULES · ENGINE",x:0,y:-750},
+ {t:"SKILLS & WORKFLOWS",x:600,y:330},
+ {t:"CONVERSATIONS FEED THE SYSTEM",x:-600,y:1000},
+ {t:"OUTPUT LIBRARIES",x:810,y:1020},
+ {t:"LIFE DOMAINS",x:0,y:2120},
+ {t:"THE COWORK ERA · AUGUST RESCAN",x:0,y:2270},
+ {t:"HOW THE WORK ACTUALLY RUNS NOW",x:0,y:2820},
+ {t:"WHAT IT HAS STARTED TO BUILD",x:0,y:3300}
+];
+
+/* ============ ENGINE ============ */
+const svg=document.getElementById("svg"),view=document.getElementById("view"),
+ gZ=document.getElementById("zones"),gE=document.getElementById("edges"),gN=document.getElementById("nodes"),
+ stage=document.getElementById("stage");
+const W=()=>stage.clientWidth,H=()=>stage.clientHeight;
+const nodes=NODES.map(o=>Object.assign({vx:0,vy:0,x:o.ax+(Math.random()-.5)*40,y:o.ay+(Math.random()-.5)*40},o));
+const byId={};nodes.forEach(n=>byId[n.id]=n);
+const edges=EDGES.map(e=>({s:byId[e[0]],t:byId[e[1]],w:e[2],inf:!!e[3]})).filter(e=>{
+ if(!e.s||!e.t){console.warn("bad edge",e);return false;}return true;});
+const deg={};edges.forEach(e=>{deg[e.s.id]=(deg[e.s.id]||0)+1;deg[e.t.id]=(deg[e.t.id]||0)+1;});
+const PFX=["Skill","Rule family","Standard","Session","Web chats","Job board","Library","Study tool","Roadmap","Domain","Route","Goal file","Plugin","Column","Completed module","Imported project"];
+nodes.forEach(n=>{n.r=Math.min(72,10+(n.r-6)*3.3+Math.min(24,(deg[n.id]||0)*1.35));
+ n.short=n.n;
+ for(const p of PFX){if(n.n.startsWith(p+" · ")){n.short=n.n.slice(p.length+3);break;}}
+ n.cr=Math.max(n.r+30,n.short.length*2.9+18);
+ n.ax*=1.62;n.ay*=1.16;n.x*=1.62;n.y*=1.16;});
+
+ZONES.forEach(z=>{const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+ t.setAttribute("class","zone-label");t.setAttribute("x",z.x);t.setAttribute("y",z.y);
+ t.setAttribute("text-anchor","middle");t.textContent=z.t;gZ.appendChild(t);});
+
+const edgeEls=edges.map(e=>{const el=document.createElementNS("http://www.w3.org/2000/svg","line");
+ el.setAttribute("class","edge"+(e.inf?" inf":""));
+ el.setAttribute("vector-effect","non-scaling-stroke");
+ el.setAttribute("stroke-width",e.w===3?1.8:e.w===2?1.2:0.8);
+ el.setAttribute("stroke-opacity",e.inf?".26":".34");
+ const ti=document.createElementNS("http://www.w3.org/2000/svg","title");
+ ti.textContent=e.s.n+"  feeds  "+e.t.n+(e.inf?"  (inferred)":"");
+ el.appendChild(ti);gE.appendChild(el);return el;});
+const nodeEls=nodes.map(n=>{const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+ g.setAttribute("class","node");g.dataset.id=n.id;
+ const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+ c.setAttribute("r",n.r);c.setAttribute("fill",CATS[n.cat].c);
+ c.setAttribute("vector-effect","non-scaling-stroke");
+ const hc=document.createElementNS("http://www.w3.org/2000/svg","circle");
+ hc.setAttribute("class","hit");
+ const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+ t.setAttribute("dy",n.r+11);t.setAttribute("text-anchor","middle");t.textContent=n.short;
+ const tt=document.createElementNS("http://www.w3.org/2000/svg","title");
+ tt.textContent=n.d?n.n+" : "+n.d.split(". ")[0]+".":n.n;
+ g.appendChild(hc);g.appendChild(c);g.appendChild(t);g.appendChild(tt);gN.appendChild(g);return g;});
+
+let alpha=1;
+function forces(){
+ for(let i=0;i<nodes.length;i++){const a=nodes[i];
+  for(let j=i+1;j<nodes.length;j++){const b=nodes[j];
+   let dx=b.x-a.x,dy=b.y-a.y;let d2=dx*dx+dy*dy||1;
+   if(d2<130000){const d=Math.sqrt(d2),f=2100/d2;dx/=d;dy/=d;
+    a.vx-=dx*f;a.vy-=dy*f;b.vx+=dx*f;b.vy+=dy*f;}}}
+ edges.forEach(e=>{let dx=e.t.x-e.s.x,dy=e.t.y-e.s.y;
+  const d=Math.sqrt(dx*dx+dy*dy)||1,ideal=e.s.cr+e.t.cr+95;
+  if(d>ideal){const f=(d-ideal)/d*.004*e.w;
+   e.s.vx+=dx*f;e.s.vy+=dy*f;e.t.vx-=dx*f;e.t.vy-=dy*f;}});
+ nodes.forEach(n=>{n.vx+=(n.ax-n.x)*.02;n.vy+=(n.ay-n.y)*.02;});
+}
+function collide(){
+ for(let pass=0;pass<4;pass++)
+ for(let i=0;i<nodes.length;i++){const a=nodes[i];
+  for(let j=i+1;j<nodes.length;j++){const b=nodes[j];
+   let dx=b.x-a.x,dy=b.y-a.y;const min=(a.cr+b.cr)*.86;
+   let d2=dx*dx+dy*dy;
+   if(d2<min*min){let d=Math.sqrt(d2)||.01;const push=(min-d)/d*.5;
+    dx*=push;dy*=push;
+    if(!a.fixed){a.x-=dx;a.y-=dy;} if(!b.fixed){b.x+=dx;b.y+=dy;}}}}
+}
+function step(){forces();
+ nodes.forEach(n=>{if(n.fixed){n.vx=0;n.vy=0;return;}
+  n.vx*=.75;n.vy*=.75;n.x+=n.vx*alpha;n.y+=n.vy*alpha;});
+ collide();}
+function render(){
+ edges.forEach((e,i)=>{const el=edgeEls[i];
+  el.setAttribute("x1",e.s.x);el.setAttribute("y1",e.s.y);
+  el.setAttribute("x2",e.t.x);el.setAttribute("y2",e.t.y);});
+ nodes.forEach((n,i)=>nodeEls[i].setAttribute("transform","translate("+n.x+","+n.y+")"));}
+for(let i=0;i<300;i++){step();alpha=Math.max(alpha*.995,.15);}
+alpha=.04;
+
+let selected=null;const hidden=new Set();
+let tf={x:0,y:0,k:1};
+function applyTf(){view.setAttribute("transform","translate("+tf.x+","+tf.y+") scale("+tf.k+")");
+ view.style.setProperty("--hitr",(13/tf.k)+"px");scheduleLabels();}
+/* labels: constant on-screen size, decluttered */
+let labTimer=null;
+function scheduleLabels(){if(labTimer)clearTimeout(labTimer);labTimer=setTimeout(labelLayout,60);}
+function labelLayout(){
+ const FS=11;                      /* constant on-screen font px */
+ const fs=FS/tf.k;
+ gZ.querySelectorAll("text").forEach(t=>t.style.fontSize=(15/tf.k)+"px");
+ const kept=[]; let shown=0;
+ const pri=new Set();
+ if(selected){pri.add(selected);const nb=neighbors(selected);nb.inn.forEach(i=>pri.add(i));nb.out.forEach(i=>pri.add(i));}
+ const order=[...nodes].sort((a,b)=>((pri.has(b.id)?1:0)-(pri.has(a.id)?1:0))||(b.r-a.r));
+ order.forEach(n=>{
+  const g=nodeEls[nodes.indexOf(n)];
+  const el=g.querySelector("text");
+  el.style.fontSize=fs+"px";
+  const k=tf.k;
+  const rEff=Math.max(n.r,5.5/k);          /* minimum visible dot size */
+  g.querySelector("circle").setAttribute("r",rEff);
+  const sx=n.x*k+tf.x, sy=n.y*k+tf.y+52, rs=rEff*k;
+  const w=n.short.length*FS*.53+4, h=FS+2;
+  const cand=[
+   {a:"middle",x:0, dy:rEff+13/k, box:{x0:sx-w/2,x1:sx+w/2,y0:sy+rs+2,y1:sy+rs+2+h}},
+   {a:"middle",x:0, dy:-(rEff+5/k), box:{x0:sx-w/2,x1:sx+w/2,y0:sy-rs-2-h,y1:sy-rs-2}},
+   {a:"start", x:rEff+6/k, dy:fs*.35, box:{x0:sx+rs+4,x1:sx+rs+4+w,y0:sy-h/2,y1:sy+h/2}},
+   {a:"end",   x:-(rEff+6/k), dy:fs*.35, box:{x0:sx-rs-4-w,x1:sx-rs-4,y0:sy-h/2,y1:sy+h/2}}
+  ];
+  let pick=null;
+  for(const c of cand){
+   if(!kept.some(b=>!(c.box.x1<b.x0||c.box.x0>b.x1||c.box.y1<b.y0||c.box.y0>b.y1))){pick=c;break;}}
+  if(!pick&&pri.has(n.id))pick=cand[0];
+  if(pick){
+   el.setAttribute("text-anchor",pick.a);
+   el.setAttribute("x",pick.x);
+   el.setAttribute("dy",pick.dy);
+   el.classList.remove("lhid");
+   kept.push(pick.box);shown++;}
+  else el.classList.add("lhid");});
+ labelLayout.shown=shown;}
+
+function fit(){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+ nodes.forEach(n=>{x0=Math.min(x0,n.x-n.cr);y0=Math.min(y0,n.y-n.cr);
+  x1=Math.max(x1,n.x+n.cr);y1=Math.max(y1,n.y+n.cr);});
+ const L=(W()>1080?300:0);
+ const k=Math.min((W()-L)/(x1-x0),(H()-60)/(y1-y0))*.87;
+ tf.k=k;tf.x=L+(W()-L)/2-(x0+x1)/2*k;tf.y=(H()+52)/2-(y0+y1)/2*k;applyTf();}
+function phoneView(){
+ let sx=0,sy=0,x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+ nodes.forEach(n=>{sx+=n.x;sy+=n.y;
+  x0=Math.min(x0,n.x);y0=Math.min(y0,n.y);x1=Math.max(x1,n.x);y1=Math.max(y1,n.y);});
+ const cx=sx/nodes.length,cy=sy/nodes.length;
+ const k=Math.max(.07,Math.min(.5,Math.min(1200/(x1-x0||1),840/(y1-y0||1))*.87));
+ tf.k=k;tf.x=W()/2-cx*k;tf.y=(H()+52)/2-cy*k;applyTf();}
+function initialView(){ if(W()>760) fit(); else phoneView(); }
+initialView();render();labelLayout();
+let fr=0;
+(function loop(){step();render();if(++fr%45===0)labelLayout();requestAnimationFrame(loop);})();
+
+stage.addEventListener("wheel",ev=>{ev.preventDefault();
+ const k=Math.min(5,Math.max(.1,tf.k*(ev.deltaY<0?1.12:.89)));
+ const mx=ev.clientX,my=ev.clientY-52;
+ tf.x=mx-(mx-tf.x)*(k/tf.k);tf.y=my-(my-tf.y)*(k/tf.k);tf.k=k;applyTf();},{passive:false});
+let drag=null,panning=null;
+svg.addEventListener("pointerdown",ev=>{const g=ev.target.closest(".node");
+ if(g){const n=byId[g.dataset.id];drag={n};n.fixed=true;}
+ else{panning={sx:ev.clientX,sy:ev.clientY,ox:tf.x,oy:tf.y};stage.classList.add("panning");}
+ svg.setPointerCapture(ev.pointerId);});
+svg.addEventListener("pointermove",ev=>{
+ if(drag){drag.n.x=(ev.clientX-tf.x)/tf.k;drag.n.y=(ev.clientY-52-tf.y)/tf.k;
+  drag.n.ax=drag.n.x;drag.n.ay=drag.n.y;render();}
+ else if(panning){tf.x=panning.ox+ev.clientX-panning.sx;tf.y=panning.oy+ev.clientY-panning.sy;applyTf();}});
+svg.addEventListener("pointerup",()=>{if(drag){drag.n.fixed=false;drag=null;}
+ panning=null;stage.classList.remove("panning");});
+
+function neighbors(id){const inn=new Set(),out=new Set();
+ edges.forEach(e=>{if(e.s.id===id)out.add(e.t.id);if(e.t.id===id)inn.add(e.s.id);});
+ return{inn,out};}
+function refresh(){
+ const q=document.getElementById("search").value.trim().toLowerCase();
+ let nb=null;if(selected)nb=neighbors(selected);
+ nodes.forEach((n,i)=>{const el=nodeEls[i];
+  el.classList.toggle("off",hidden.has(n.cat));
+  let dim=false,hit=false;
+  if(selected)dim=!(n.id===selected||nb.inn.has(n.id)||nb.out.has(n.id));
+  if(q){if(n.n.toLowerCase().includes(q)||n.d.toLowerCase().includes(q)){hit=true;dim=false;}else dim=true;}
+  el.classList.toggle("dim",dim&&!hidden.has(n.cat));
+  el.classList.toggle("hit",hit);el.classList.toggle("sel",n.id===selected);});
+ edges.forEach((e,i)=>{const el=edgeEls[i];
+  el.classList.toggle("off",hidden.has(e.s.cat)||hidden.has(e.t.cat));
+  let dim=false,stroke="#000";
+  if(selected){if(e.s.id===selected)stroke="#dc2626";else if(e.t.id===selected)stroke="#2563eb";else dim=true;}
+  if(q&&!dim){if(!(e.s.n.toLowerCase().includes(q)||e.t.n.toLowerCase().includes(q)))dim=true;}
+  el.setAttribute("stroke",stroke);el.classList.toggle("dim",dim);});}
+/* pointer capture retargets the click, so track what was pressed */
+let press=null;
+svg.addEventListener("pointerdown",ev=>{const g=ev.target.closest(".node");
+ press={id:g?g.dataset.id:null,x:ev.clientX,y:ev.clientY};},true);
+function pressedNode(ev){
+ if(press&&Math.abs(ev.clientX-press.x)<7&&Math.abs(ev.clientY-press.y)<7) return press.id;
+ const g=ev.target.closest(".node"); return g?g.dataset.id:null;}
+svg.addEventListener("click",ev=>{const id=pressedNode(ev);
+ if(id)select(id);else{selected=null;closePanel();refresh();}});
+svg.addEventListener("dblclick",ev=>{const id=pressedNode(ev);if(!id)return;
+ const n=byId[id];const tk=Math.max(tf.k,1.05);
+ const tx=W()/2-n.x*tk,ty=H()/2-n.y*tk;
+ const sx=tf.x,sy=tf.y,sk=tf.k,t0=performance.now();
+ (function anim(t){const p=Math.min(1,(t-t0)/280),e2=p*(2-p);
+  tf.x=sx+(tx-sx)*e2;tf.y=sy+(ty-sy)*e2;tf.k=sk+(tk-sk)*e2;applyTf();
+  if(p<1)requestAnimationFrame(anim);})(t0);});
+function select(id){selected=id;refresh();openPanel(byId[id]);scheduleLabels();}
+
+const panel=document.getElementById("panel"),pbody=document.getElementById("panelBody");
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function openPanel(n){
+ const nb=neighbors(n.id);
+ const rel=ids=>[...ids].map(i=>'<li class="rel" data-go="'+i+'">'+esc(byId[i].n)+"</li>").join("")||"<li style='color:#999'>none</li>";
+ pbody.innerHTML='<span class="cat" style="background:'+CATS[n.cat].c+'">'+CATS[n.cat].name+'</span>'+
+  "<h2>"+esc(n.n)+"</h2>"+
+  (n.d?"<h3>What it does</h3><p>"+esc(n.d)+"</p>":"")+
+  "<h3>Fed by</h3><ul>"+rel(nb.inn)+"</ul>"+
+  "<h3>Feeds into</h3><ul>"+rel(nb.out)+"</ul>"+
+  (n.note?"<h3>Worth knowing</h3><p>"+esc(n.note)+"</p>":"");
+ panel.classList.add("open");
+ pbody.querySelectorAll(".rel").forEach(el=>el.addEventListener("click",()=>select(el.dataset.go)));}
+function closePanel(){panel.classList.remove("open");}
+document.getElementById("closePanel").addEventListener("click",()=>{selected=null;closePanel();refresh();});
+
+const legend=document.getElementById("legend");
+legend.innerHTML='<div class="t">Categories · click to filter</div>'+
+ Object.keys(CATS).map(c=>'<div class="lg" data-c="'+c+'"><span class="sw" style="background:'+CATS[c].c+'"></span>'+CATS[c].name+"</div>").join("")+
+ '<div class="keys"><span class="ln"></span>one thing feeds another</div>';
+legend.querySelectorAll(".lg").forEach(el=>el.addEventListener("click",()=>{
+ const c=el.dataset.c;if(hidden.has(c))hidden.delete(c);else hidden.add(c);
+ el.classList.toggle("off",hidden.has(c));refresh();}));
+
+const searchEl=document.getElementById("search");
+searchEl.addEventListener("input",refresh);
+searchEl.addEventListener("keydown",ev=>{if(ev.key==="Enter"){
+ const q=searchEl.value.trim().toLowerCase();if(!q)return;
+ const n=nodes.find(n=>n.n.toLowerCase().includes(q));
+ if(n){select(n.id);const tk=Math.max(tf.k,1.05);
+  tf.k=tk;tf.x=W()/2-n.x*tk;tf.y=H()/2-n.y*tk;applyTf();}}});
+document.getElementById("btnFit").addEventListener("click",fit);
+
+/* small screens */
+const legendEl=document.getElementById("legend"),btnKey=document.getElementById("btnKey");
+btnKey.addEventListener("click",()=>legendEl.classList.toggle("open"));
+
+let rt;addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(initialView,180);});
+addEventListener("orientationchange",()=>setTimeout(initialView,320));
+setTimeout(initialView,900);
+
+/* pinch to zoom */
+const ptrs=new Map();let pinch=null;
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+svg.addEventListener("pointerdown",ev=>{ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+ if(ptrs.size===2){const[a,b]=[...ptrs.values()];
+  pinch={d:dist(a,b),k:tf.k,mx:(a.x+b.x)/2,my:(a.y+b.y)/2-52,tx:tf.x,ty:tf.y};
+  drag=null;panning=null;stage.classList.remove("panning");}},true);
+svg.addEventListener("pointermove",ev=>{if(!ptrs.has(ev.pointerId))return;
+ ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+ if(pinch&&ptrs.size===2){const[a,b]=[...ptrs.values()];
+  const k=Math.min(5,Math.max(.1,pinch.k*dist(a,b)/(pinch.d||1)));
+  tf.x=pinch.mx-(pinch.mx-pinch.tx)*(k/pinch.k);
+  tf.y=pinch.my-(pinch.my-pinch.ty)*(k/pinch.k);tf.k=k;applyTf();
+  ev.preventDefault();ev.stopPropagation();}},true);
+function endPtr(ev){ptrs.delete(ev.pointerId);if(ptrs.size<2)pinch=null;}
+svg.addEventListener("pointerup",endPtr,true);
+svg.addEventListener("pointercancel",endPtr,true);
+
+refresh();
+</script>
+</body>
+</html>

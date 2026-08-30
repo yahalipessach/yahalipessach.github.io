@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Admin — Yahali Pessach</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('fonts/inter.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #fff;
+    color: #111;
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 56px 24px 100px;
+    line-height: 1.5;
+  }
+  a.back { color: #777; font-size: 14px; text-decoration: none; }
+  a.back:hover { color: #111; }
+  h1 { margin-top: 20px; font-size: 24px; font-weight: 600; }
+  p.sub { margin-top: 6px; color: #777; font-size: 14px; }
+
+  fieldset {
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    padding: 16px 18px 18px;
+    margin-top: 28px;
+  }
+  legend {
+    font-size: 13px;
+    color: #777;
+    padding: 0 6px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: #555;
+    margin-top: 14px;
+    margin-bottom: 4px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input[type=text], input[type=password], input[type=date], select, textarea {
+    width: 100%;
+    font: inherit;
+    font-size: 15px;
+    padding: 9px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    color: #111;
+  }
+  textarea {
+    min-height: 220px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+  }
+  #sketch { min-height: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .hint { font-size: 12px; color: #999; margin-top: 4px; }
+  .hint code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+  .hint em { font-style: italic; }
+  .hint strong { font-weight: 600; }
+
+  button {
+    margin-top: 20px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 11px 20px;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button:hover { background: #333; }
+  button:disabled { background: #aaa; cursor: default; }
+  button.secondary {
+    background: none;
+    color: #555;
+    border: 1px solid #ccc;
+    font-weight: 400;
+    padding: 6px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  button.secondary:hover { background: #f4f4f4; }
+
+  #status {
+    margin-top: 16px;
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    display: none;
+  }
+  #status.ok { display: block; background: #eaf6ec; color: #1b6a2f; }
+  #status.err { display: block; background: #fbeaea; color: #a12626; }
+  #status.pending { display: block; background: #f0f0f0; color: #555; }
+
+  details { margin-top: 10px; }
+  summary { font-size: 13px; color: #777; cursor: pointer; }
+
+  #postList { margin-top: 14px; }
+  .post-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  .post-row span { color: #333; }
+  .post-row time { color: #999; font-size: 13px; margin-left: 8px; }
+  .post-row .btns { display: flex; gap: 6px; }
+  .post-row button {
+    margin: 0;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: 400;
+    background: none;
+    border-radius: 4px;
+  }
+  .post-row button.edit { color: #333; border: 1px solid #ccc; }
+  .post-row button.edit:hover { background: #f4f4f4; }
+  .post-row button.del { color: #a12626; border: 1px solid #d9b2b2; }
+  .post-row button.del:hover { background: #fbeaea; }
+  #editBanner {
+    display: none;
+    margin-top: 16px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    background: #fff8e1;
+    color: #7a5c00;
+    font-size: 14px;
+  }
+  #editBanner button { margin: 0 0 0 10px; padding: 3px 9px; font-size: 12px; font-weight: 400; background: none; color: #7a5c00; border: 1px solid #d9c583; border-radius: 4px; }
+
+  #preview {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333;
+    min-height: 20px;
+  }
+  #preview p { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<a class="back" href="./">&larr; Yahali Pessach</a>
+<h1>Admin</h1>
+<p class="sub">Publish a new post directly to your site. This page is not linked from the site itself — bookmark it.</p>
+
+<details id="settingsBlock">
+  <summary>Repo connection settings</summary>
+  <fieldset>
+    <legend>GitHub connection</legend>
+    <label for="owner">GitHub username</label>
+    <input type="text" id="owner" placeholder="e.g. yahalipessach">
+    <label for="repo">Repository name</label>
+    <input type="text" id="repo" placeholder="e.g. yahalipessach.github.io">
+    <label for="branch">Branch</label>
+    <input type="text" id="branch" value="main">
+    <label for="token">Personal Access Token</label>
+    <input type="password" id="token" placeholder="github_pat_...">
+    <p class="hint">Stored only in this browser (localStorage), never uploaded anywhere except directly to GitHub's API when you publish. Needs a token with "repo" (or fine-grained: Contents read/write) permission on this repository.</p>
+    <button type="button" class="secondary" id="saveSettings">Save settings</button>
+    <button type="button" class="secondary" id="clearSettings">Clear saved token</button>
+  </fieldset>
+</details>
+
+<fieldset>
+  <legend>New post</legend>
+  <label for="column">Column</label>
+  <select id="column">
+    <option value="writings">Writings</option>
+  </select>
+
+  <label for="title">Title</label>
+  <input type="text" id="title" placeholder="e.g. Do markets know something we don&rsquo;t?">
+
+  <label for="subtitle">Subtitle (optional)</label>
+  <input type="text" id="subtitle" placeholder="e.g. A two-way game of chicken">
+
+  <label for="date">Date</label>
+  <input type="date" id="date">
+
+  <label for="body">Body</label>
+  <textarea id="body" placeholder="Write the post here. Leave a blank line between paragraphs."></textarea>
+  <p class="hint">Each blank-line-separated block becomes one paragraph. Wrap text in <code>*asterisks*</code> for <em>italics</em>, <code>**double**</code> for <strong>bold</strong>, and <code>[text](https://url)</code> for links. To place an image or sketch at a specific point, put <code>[image]</code> or <code>[sketch]</code> on its own line where you want it.</p>
+  <p class="hint">Live preview of formatting:</p>
+  <div id="preview"></div>
+
+  <label for="images">Images (optional)</label>
+  <input type="file" id="images" accept="image/*" multiple>
+  <p class="hint">Uploaded in the order chosen. By default they appear before the text (after the sketch, if any). Use <code>[image]</code> markers in the body to place them elsewhere.</p>
+
+  <label for="sketch">p5.js sketch code (optional)</label>
+  <textarea id="sketch" placeholder="function setup() {&#10;  createCanvas(600, 400).parent('sketch-container');&#10;}&#10;function draw() {&#10;  background(240);&#10;}"></textarea>
+  <p class="hint">Paste a normal p5.js sketch (global mode). Call <code>.parent('sketch-container')</code> on your <code>createCanvas()</code> so it lands in the post. Appears at the top of the post by default, or wherever a <code>[sketch]</code> marker sits in the body.</p>
+</fieldset>
+
+<div id="editBanner">Editing <strong id="editingTitle"></strong> — publishing will update this post.<button type="button" id="cancelEditBtn">Cancel edit</button></div>
+
+<button type="button" id="publishBtn">Publish</button>
+<div id="status"></div>
+
+<fieldset>
+  <legend>Manage posts (edit / delete)</legend>
+  <label for="delColumn">Column</label>
+  <select id="delColumn">
+    <option value="writings">Writings</option>
+  </select>
+  <button type="button" class="secondary" id="loadPostsBtn">Load posts</button>
+  <div id="postList"></div>
+</fieldset>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ---- settings persistence ----
+function loadSettings() {
+  $('owner').value = localStorage.getItem('admin_owner') || '';
+  $('repo').value = localStorage.getItem('admin_repo') || '';
+  $('branch').value = localStorage.getItem('admin_branch') || 'main';
+  $('token').value = localStorage.getItem('admin_token') || '';
+  if (!$('owner').value || !$('token').value) $('settingsBlock').open = true;
+}
+$('saveSettings').addEventListener('click', () => {
+  localStorage.setItem('admin_owner', $('owner').value.trim());
+  localStorage.setItem('admin_repo', $('repo').value.trim());
+  localStorage.setItem('admin_branch', $('branch').value.trim() || 'main');
+  localStorage.setItem('admin_token', $('token').value.trim());
+  showStatus('ok', 'Settings saved in this browser.');
+  $('settingsBlock').open = false;
+});
+$('clearSettings').addEventListener('click', () => {
+  ['admin_owner','admin_repo','admin_branch','admin_token'].forEach(k => localStorage.removeItem(k));
+  loadSettings();
+  showStatus('ok', 'Token cleared.');
+});
+loadSettings();
+$('date').value = new Date().toISOString().slice(0,10);
+
+function showStatus(kind, msg) {
+  const el = $('status');
+  el.className = kind;
+  el.textContent = msg;
+}
+
+// ---- text helpers ----
+function slugify(str) {
+  return str.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 60) || 'post';
+}
+function formatDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function escapeHtml(str) {
+  return str
+    .split('&').join('&amp;')
+    .split('<').join('&lt;')
+    .split('>').join('&gt;');
+}
+// Runs AFTER escaping, so this only ever introduces safe <strong>/<em> tags.
+function applyInlineFormatting(escapedStr) {
+  let out = escapedStr.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>');
+  out = out.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
+  return out;
+}
+function formatBlock(block) {
+  return applyInlineFormatting(escapeHtml(block));
+}
+
+// ---- live preview ----
+function updatePreview() {
+  const raw = $('body').value;
+  const blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  $('preview').innerHTML = blocks
+    .filter(b => b !== '[image]' && b !== '[sketch]')
+    .map(b => `<p>${formatBlock(b)}</p>`)
+    .join('') || '<span style="color:#bbb">Preview appears here as you type…</span>';
+}
+$('body').addEventListener('input', updatePreview);
+updatePreview();
+
+function b64EncodeUnicode(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64DecodeUnicode(str) {
+  return decodeURIComponent(escape(atob(str)));
+}
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(',')[1]);
+    r.onerror = () => reject(new Error(`Could not read file ${file.name}`));
+    r.readAsDataURL(file);
+  });
+}
+function fileExt(name) {
+  const m = /\.([a-zA-Z0-9]+)$/.exec(name);
+  return m ? m[1].toLowerCase() : 'png';
+}
+
+const COLUMN_NAMES = {
+  'writings': 'Writings'
+};
+
+async function ghRequest(path, opts) {
+  const owner = localStorage.getItem('admin_owner');
+  const repo = localStorage.getItem('admin_repo');
+  const token = localStorage.getItem('admin_token');
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github+json',
+      ...(opts && opts.headers ? opts.headers : {})
+    }
+  });
+  return res;
+}
+
+async function getFile(path) {
+  const res = await ghRequest(path, { method: 'GET' });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return { sha: data.sha, content: b64DecodeUnicode(data.content) };
+}
+
+async function putFile(path, content, sha, message) {
+  const branch = localStorage.getItem('admin_branch') || 'main';
+  const body = { message, content: b64EncodeUnicode(content), branch };
+  if (sha) body.sha = sha;
+  const res = await ghRequest(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+async function putFileBase64(path, base64Content, sha, message) {
+  const branch = localStorage.getItem('admin_branch') || 'main';
+  const body = { message, content: base64Content, branch };
+  if (sha) body.sha = sha;
+  const res = await ghRequest(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+function buildPostHtml(columnName, title, subtitle, dateDisplay, articleInnerHtml) {
+  const subtitleHtml = subtitle ? `<p class="subtitle">${formatBlock(subtitle)}</p>` : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(title)} — Yahali Pessach</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #fff;
+    color: #111;
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 64px 24px;
+    line-height: 1.65;
+  }
+  .back { color: #777; font-size: 14px; text-decoration: none; }
+  .back:hover { color: #111; }
+  h1 { margin-top: 24px; font-size: 27px; font-weight: 600; line-height: 1.25; }
+  p.subtitle { margin-top: 8px; font-size: 17px; color: #666; line-height: 1.4; }
+  time { display: block; margin-top: 10px; color: #999; font-size: 14px; }
+  article { margin-top: 32px; }
+  article p { margin-bottom: 18px; font-size: 17px; text-align: justify; }
+  article a { color: #111; text-underline-offset: 3px; }
+  article a:hover { color: #555; }
+  article em { font-style: italic; }
+  article strong { font-weight: 600; }
+  article img { max-width: 100%; margin: 8px 0 18px; display: block; }
+  #sketch-container { margin: 8px 0 24px; }
+  #sketch-container canvas { display: block; max-width: 100%; height: auto; }
+  h1 .col { color: #999; }
+  .datasays { margin: 40px 0 8px; background: #f6f6f6; border-radius: 6px; padding: 22px 24px 6px; }
+  .datasays h2 { font-size: 15px; font-weight: 600; color: #8a8a8a; margin-bottom: 14px; }
+  .datasays p.caption { font-size: 15px; color: #666; margin-bottom: 14px; text-align: left; }
+  .datasays img, .datasays canvas { mix-blend-mode: multiply; }
+  .datasays #sketch-container { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<a class="back" href="./">&larr; ${escapeHtml(columnName)}</a>
+<h1>${escapeHtml(title)}</h1>
+${subtitleHtml}
+<time>${dateDisplay}</time>
+
+<article>
+${articleInnerHtml}
+</article>
+
+</body>
+</html>
+`;
+}
+
+function insertIntoList(indexHtml, slug, title, dateDisplay) {
+  const doc = new DOMParser().parseFromString(indexHtml, 'text/html');
+  let ul = doc.querySelector('ul');
+  if (!ul) {
+    // Column page lost its list; recreate it after the header/tagline
+    ul = doc.createElement('ul');
+    const anchor = doc.querySelector('.header') || doc.querySelector('.tagline') || doc.querySelector('h1');
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(ul, anchor.nextSibling);
+    } else {
+      doc.body.appendChild(ul);
+    }
+  }
+  const empty = doc.querySelector('.empty');
+  if (empty) empty.remove();
+  const li = doc.createElement('li');
+  const a = doc.createElement('a');
+  a.setAttribute('href', slug + '.html');
+  a.textContent = title;
+  const t = doc.createElement('time');
+  t.textContent = dateDisplay;
+  li.appendChild(a);
+  li.appendChild(t);
+  ul.insertBefore(li, ul.firstChild);
+  return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML + '\n';
+}
+
+let editState = null;
+
+function nodeToMarkdown(node) {
+  let out = '';
+  node.childNodes.forEach(ch => {
+    if (ch.nodeType === 3) { out += ch.textContent; }
+    else if (ch.nodeType === 1) {
+      const inner = nodeToMarkdown(ch);
+      if (ch.tagName === 'EM') out += '*' + inner + '*';
+      else if (ch.tagName === 'STRONG') out += '**' + inner + '**';
+      else if (ch.tagName === 'A') out += '[' + inner + '](' + ch.getAttribute('href') + ')';
+      else out += inner;
+    }
+  });
+  return out;
+}
+
+function displayDateToIso(str) {
+  const d = new Date(str);
+  if (isNaN(d)) return new Date().toISOString().slice(0,10);
+  return d.toISOString().slice(0,10);
+}
+
+async function loadPostForEdit(columnSlug, slug, listTitle) {
+  showStatus('pending', 'Loading post…');
+  try {
+    const postFile = await getFile(`${columnSlug}/${slug}.html`);
+    if (!postFile) throw new Error('Post file not found.');
+    const doc = new DOMParser().parseFromString(postFile.content, 'text/html');
+    const title = (doc.querySelector('h1') || {}).textContent || listTitle;
+    const subtitleEl = doc.querySelector('p.subtitle');
+    const subtitle = subtitleEl ? nodeToMarkdown(subtitleEl) : '';
+    const timeEl = doc.querySelector('time');
+    const dateIso = timeEl ? displayDateToIso(timeEl.textContent) : new Date().toISOString().slice(0,10);
+
+    const existingImages = [];
+    const bodyBlocks = [];
+    const article = doc.querySelector('article');
+    if (article) {
+      const flat = [];
+      article.childNodes.forEach(ch => {
+        if (ch.nodeType !== 1) return;
+        if (ch.tagName === 'SECTION' && ch.classList.contains('datasays')) {
+          Array.from(ch.children).forEach(sub => { if (sub.tagName !== 'H2') flat.push(sub); });
+        } else {
+          flat.push(ch);
+        }
+      });
+      flat.forEach(ch => {
+        if (ch.tagName === 'P') bodyBlocks.push(nodeToMarkdown(ch));
+        else if (ch.tagName === 'IMG') { existingImages.push(ch.getAttribute('src')); bodyBlocks.push('[image]'); }
+        else if (ch.id === 'sketch-container') bodyBlocks.push('[sketch]');
+      });
+    }
+
+    // Sketch code: separate file (admin-published) or inline (manually built)
+    let sketchCode = '';
+    const sketchFile = await getFile(`${columnSlug}/${slug}-sketch.js`);
+    if (sketchFile) { sketchCode = sketchFile.content; }
+    else {
+      const scripts = doc.querySelectorAll('script:not([src])');
+      scripts.forEach(s => { if (s.textContent.includes('setup')) sketchCode = s.textContent.trim(); });
+    }
+
+    $('column').value = columnSlug;
+    $('title').value = title;
+    $('subtitle').value = subtitle;
+    $('date').value = dateIso;
+    $('body').value = bodyBlocks.join('\n\n');
+    $('sketch').value = sketchCode;
+    $('images').value = '';
+    updatePreview();
+
+    editState = { columnSlug, slug, existingImages };
+    $('editingTitle').textContent = title;
+    $('editBanner').style.display = 'block';
+    $('publishBtn').textContent = 'Update post';
+    showStatus('ok', 'Post loaded into the form. Make your changes and press Update post.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    showStatus('err', err.message);
+  }
+}
+
+function clearEditState() {
+  editState = null;
+  $('editBanner').style.display = 'none';
+  $('publishBtn').textContent = 'Publish';
+}
+
+$('cancelEditBtn').addEventListener('click', () => {
+  clearEditState();
+  $('title').value = ''; $('subtitle').value = ''; $('body').value = ''; $('sketch').value = ''; $('images').value = '';
+  updatePreview();
+  showStatus('ok', 'Edit cancelled.');
+});
+
+$('publishBtn').addEventListener('click', async () => {
+  const owner = localStorage.getItem('admin_owner');
+  const repo = localStorage.getItem('admin_repo');
+  const token = localStorage.getItem('admin_token');
+  const columnSlug = $('column').value;
+  const columnName = COLUMN_NAMES[columnSlug];
+  const title = $('title').value.trim();
+  const subtitle = $('subtitle').value.trim();
+  const dateIso = $('date').value;
+  const bodyRaw = $('body').value.trim();
+  const sketchCode = $('sketch').value.trim();
+  const imageFiles = Array.from($('images').files);
+
+  if (!owner || !repo || !token) {
+    showStatus('err', 'Fill in repo connection settings first (top of page).');
+    $('settingsBlock').open = true;
+    return;
+  }
+  if (!title || !bodyRaw) {
+    showStatus('err', 'Title and body are required.');
+    return;
+  }
+
+  const dateDisplay = formatDate(dateIso);
+  const editing = editState && editState.columnSlug === columnSlug;
+  const slug = editing ? editState.slug : slugify(title);
+  const postPath = `${columnSlug}/${slug}.html`;
+  const indexPath = `${columnSlug}/index.html`;
+
+  $('publishBtn').disabled = true;
+
+  try {
+    const imageTags = [];
+    if (editing && imageFiles.length === 0 && editState.existingImages.length) {
+      editState.existingImages.forEach(src => {
+        imageTags.push(`<img src="${src}" alt="${escapeHtml(title)}">`);
+      });
+    }
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+      showStatus('pending', `Uploading image ${i + 1} of ${imageFiles.length}…`);
+      const base64 = await readFileAsBase64(file);
+      const ext = fileExt(file.name);
+      const imgPath = `${columnSlug}/media/${slug}-${i + 1}.${ext}`;
+      let imgSha = null;
+      const existingImg = await ghRequest(imgPath, { method: 'GET' });
+      if (existingImg.ok) imgSha = (await existingImg.json()).sha;
+      await putFileBase64(imgPath, base64, imgSha, `Add image for: ${title}`);
+      imageTags.push(`<img src="media/${slug}-${i + 1}.${ext}" alt="${escapeHtml(title)}">`);
+    }
+
+    let sketchBlock = '';
+    if (sketchCode) {
+      showStatus('pending', 'Uploading sketch…');
+      const sketchPath = `${columnSlug}/${slug}-sketch.js`;
+      let sketchSha = null;
+      const existingSketch = await ghRequest(sketchPath, { method: 'GET' });
+      if (existingSketch.ok) sketchSha = (await existingSketch.json()).sha;
+      await putFile(sketchPath, sketchCode, sketchSha, `Add sketch for: ${title}`);
+      sketchBlock =
+        `<div id="sketch-container"></div>\n` +
+        `<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"><\/script>\n` +
+        `<script src="${slug}-sketch.js"><\/script>`;
+    }
+
+    const blocks = bodyRaw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+    let imgIdx = 0;
+    let sketchUsed = false;
+    const pieces = [];
+    for (const block of blocks) {
+      if (block === '[image]') {
+        if (imgIdx < imageTags.length) pieces.push(imageTags[imgIdx++]);
+      } else if (block === '[sketch]') {
+        if (sketchBlock) { pieces.push(sketchBlock); sketchUsed = true; }
+      } else {
+        pieces.push(`<p>${formatBlock(block)}</p>`);
+      }
+    }
+    // Unused media go at the END, inside a SimonSays?DataSays section
+    const tailMedia = imageTags.slice(imgIdx);
+    if (sketchBlock && !sketchUsed) tailMedia.push(sketchBlock);
+    if (tailMedia.length) {
+      pieces.push('<section class="datasays">\n<h2>SimonSays?DataSays</h2>\n' + tailMedia.join('\n') + '\n</section>');
+    }
+
+    const articleHtml = pieces.join('\n');
+
+    showStatus('pending', 'Publishing post…');
+    const existingPost = await getFile(postPath);
+    const postHtml = buildPostHtml(columnName, title, subtitle, dateDisplay, articleHtml);
+    await putFile(postPath, postHtml, existingPost ? existingPost.sha : null, `Add post: ${title}`);
+
+    showStatus('pending', 'Updating column list…');
+    const indexFile = await getFile(indexPath);
+    if (!indexFile) throw new Error(`Could not find ${indexPath} in the repo.`);
+    let idxHtml = indexFile.content;
+    if (editing) idxHtml = removeFromList(idxHtml, slug);
+    const newIndexHtml = insertIntoList(idxHtml, slug, title, dateDisplay);
+    await putFile(indexPath, newIndexHtml, indexFile.sha, `List post: ${title}`);
+
+    showStatus('ok', (editing ? 'Updated' : 'Published') + ` — live in a minute or two at yoursite/${postPath}`);
+    clearEditState();
+    $('title').value = '';
+    $('subtitle').value = '';
+    $('body').value = '';
+    $('sketch').value = '';
+    $('images').value = '';
+    updatePreview();
+  } catch (err) {
+    showStatus('err', err.message);
+  } finally {
+    $('publishBtn').disabled = false;
+  }
+});
+
+async function deleteFile(path, sha, message) {
+  const branch = localStorage.getItem('admin_branch') || 'main';
+  const res = await ghRequest(path, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, sha, branch })
+  });
+  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
+async function listDir(path) {
+  const res = await ghRequest(path, { method: 'GET' });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error(`Listing ${path} failed: ${res.status}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+function removeFromList(indexHtml, slug) {
+  const doc = new DOMParser().parseFromString(indexHtml, 'text/html');
+  const link = doc.querySelector(`ul li a[href="${slug}.html"]`);
+  if (link) link.closest('li').remove();
+  return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML + '\n';
+}
+
+$('loadPostsBtn').addEventListener('click', async () => {
+  const columnSlug = $('delColumn').value;
+  const listEl = $('postList');
+  listEl.innerHTML = '<p class="hint">Loading…</p>';
+  try {
+    const indexFile = await getFile(`${columnSlug}/index.html`);
+    if (!indexFile) throw new Error('Could not load column index.');
+    const doc = new DOMParser().parseFromString(indexFile.content, 'text/html');
+    const items = Array.from(doc.querySelectorAll('ul li'));
+    if (items.length === 0) {
+      listEl.innerHTML = '<p class="hint">No posts in this column.</p>';
+      return;
+    }
+    listEl.innerHTML = '';
+    for (const li of items) {
+      const a = li.querySelector('a');
+      const t = li.querySelector('time');
+      if (!a) continue;
+      const slug = a.getAttribute('href').replace(/\.html$/, '');
+      const row = document.createElement('div');
+      row.className = 'post-row';
+      const label = document.createElement('span');
+      label.textContent = a.textContent;
+      if (t) {
+        const time = document.createElement('time');
+        time.textContent = t.textContent;
+        label.appendChild(time);
+      }
+      const btns = document.createElement('div');
+      btns.className = 'btns';
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'edit';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => loadPostForEdit(columnSlug, slug, a.textContent));
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'del';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', () => deletePost(columnSlug, slug, a.textContent, row));
+      btns.appendChild(editBtn);
+      btns.appendChild(delBtn);
+      row.appendChild(label);
+      row.appendChild(btns);
+      listEl.appendChild(row);
+    }
+  } catch (err) {
+    listEl.innerHTML = '';
+    showStatus('err', err.message);
+  }
+});
+
+async function deletePost(columnSlug, slug, title, rowEl) {
+  if (!confirm(`Delete "${title}"? This removes it from the site permanently.`)) return;
+  showStatus('pending', 'Deleting…');
+  try {
+    // 1. Post file
+    const postPath = `${columnSlug}/${slug}.html`;
+    const postRes = await ghRequest(postPath, { method: 'GET' });
+    if (postRes.ok) {
+      const postData = await postRes.json();
+      await deleteFile(postPath, postData.sha, `Delete post: ${title}`);
+    }
+    // 2. Sketch file, if any
+    const sketchPath = `${columnSlug}/${slug}-sketch.js`;
+    const sketchRes = await ghRequest(sketchPath, { method: 'GET' });
+    if (sketchRes.ok) {
+      const sketchData = await sketchRes.json();
+      await deleteFile(sketchPath, sketchData.sha, `Delete sketch for: ${title}`);
+    }
+    // 3. Media files starting with the slug
+    const media = await listDir(`${columnSlug}/media`);
+    for (const f of media) {
+      if (f.name.startsWith(slug + '-')) {
+        await deleteFile(`${columnSlug}/media/${f.name}`, f.sha, `Delete media for: ${title}`);
+      }
+    }
+    // 4. Remove from column list
+    const indexPath = `${columnSlug}/index.html`;
+    const indexFile = await getFile(indexPath);
+    if (indexFile) {
+      const newIndexHtml = removeFromList(indexFile.content, slug);
+      await putFile(indexPath, newIndexHtml, indexFile.sha, `Unlist post: ${title}`);
+    }
+    rowEl.remove();
+    showStatus('ok', `Deleted "${title}".`);
+  } catch (err) {
+    showStatus('err', err.message);
+  }
+}
+</script>
+
+</body>
+</html>

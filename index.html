@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+<title>Yahali Pessach</title>
+<style>
+  @font-face {
+    font-family: 'Inter';
+    src: url('fonts/inter.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  a { text-decoration: none; }
+
+  body {
+    background: transparent;
+    color: #fff;
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    margin: 0;
+  }
+
+  .card {
+    position: absolute;
+    left: 6%;
+    top: 46%;
+    transform: translateY(-50%);
+    width: auto;
+    max-width: 46vw;
+    display: block;
+  }
+
+  .photo {
+    width: 190px;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 16px;
+  }
+  .photo-fallback {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border: 1px dashed rgba(255,255,255,.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+  }
+  p {
+    margin-top: 8px;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #fff;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+  nav {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  nav a {
+    position: absolute;
+    pointer-events: auto;
+    transition: transform .2s ease;
+  }
+  nav a:hover { transform: rotate(var(--heel, 0deg)) translateY(-5px) !important; }
+  /* while the fleet is being placed, the heel must not animate in */
+  nav.settling a { transition: none; }
+  nav svg { display: block; overflow: visible; }
+  nav .nm { font-weight: 700; fill: #216DB0; letter-spacing: .01em; }
+  .contact {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .contact a {
+    font-weight: 700;
+    color: #fff;
+    font-size: 14px;
+    text-decoration: none;
+    width: fit-content;
+  }
+
+
+  /* narrow: stack the fleet, there isn't room to scatter it */
+  @media (max-width: 1250px) {
+    body { height: auto; overflow: visible; }
+    .card {
+      position: static;
+      transform: none;
+      max-width: none;
+      padding: 46px 22px 0;
+    }
+    .photo { width: 132px; margin-bottom: 14px; }
+    h1 { font-size: 27px; letter-spacing: -.01em; }
+    p { white-space: normal; font-size: 15px; line-height: 1.45; }
+    .contact { margin-top: 18px; gap: 0; }
+    .contact a { font-size: 13.5px; padding: 6px 0; opacity: .88; }
+
+    nav {
+      position: static;
+      inset: auto;
+      pointer-events: auto;
+      display: block;
+      padding: 26px 0 64px;
+    }
+    nav a {
+      position: static !important;
+      display: block;
+      width: max-content;
+      max-width: calc(100vw - 28px);
+      margin: 2px 0;
+    }
+    nav a:hover, nav a:active { transform: none !important; }
+    nav svg { display: block; }
+
+    nav a:nth-child(1) { margin-left: 18vw; transform: rotate(-1.4deg) !important; }
+    nav a:nth-child(2) { margin-left: 40vw; transform: rotate(1.1deg)  !important; }
+    nav a:nth-child(3) { margin-left:  6vw; transform: rotate(1.5deg)  !important; }
+    nav a:nth-child(4) { margin-left: 32vw; transform: rotate(-1deg)   !important; }
+    nav a:nth-child(5) { margin-left: 12vw; transform: rotate(1.2deg)  !important; }
+    nav a:nth-child(6) { margin-left: 34vw; transform: rotate(-1.2deg) !important; }
+    nav a:nth-child(7) { margin-left: 30vw; transform: rotate(-1.3deg) !important; }
+    nav a:nth-child(8) { margin-left: 28vw; transform: rotate(.9deg)   !important; }
+    nav a:nth-child(9) { margin-left:  8vw; transform: rotate(-1.2deg) !important; }
+  }
+  html { background: #216DB0; }
+  #maze { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<canvas id="maze"></canvas>
+
+<main class="card">
+  <img class="photo" src="photo.jpeg" alt="Yahali Pessach" fetchpriority="high"
+       onerror="this.outerHTML='<div class=&quot;photo-fallback&quot;>photo.jpeg</div>'">
+  <h1>Yahali Pessach</h1>
+  <p>Philosophy, Politics, Economics student @ UCL</p>
+  <div class="contact">
+    <a href="https://www.linkedin.com/in/yahali-pessach/">linkedin.com/in/yahali-pessach</a>
+    <a href="mailto:yahali.pessach.25@ucl.ac.uk">yahali.pessach.25@ucl.ac.uk</a>
+  </div>
+</main>
+
+<nav id="fleet" aria-label="Sections"></nav>
+
+
+<script>
+/* the fleet */
+(function(){
+  /* most to least prominent */
+  var items = [
+    ["CV", "cv/"],
+    ["Now", "now/"],
+    ["Reading & Listening", "media/"],
+    ["Writings", "writings/"],
+    ["FTF \u201926", "forecasting-the-future/"],
+    ["Explore Econ \u201926", "explore-econ/"],
+    ["My Claude Flow", "claude-flow/"],
+    ["TutorYaya", "https://www.tutoryaya.com"],
+    ["1000FreePints", "https://1000freepints.com"]
+  ];
+  function prom(k, n){
+    var t = n > 1 ? k / (n - 1) : 0;
+    return { sc: 1 - 0.07 * t };
+  }
+  var ctx = document.createElement("canvas").getContext("2d");
+  function measure(t, size){ ctx.font = "700 " + size + "px Inter, Helvetica, Arial"; return ctx.measureText(t).width; }
+  var MINW = 118, MAXW = 238, PAD = 44;
+  function fit(t){
+    for (var s = 14; s >= 10; s -= 0.25){
+      var w = measure(t, s) + PAD;
+      if (w <= MAXW) return { size: s, W: Math.max(MINW, Math.round(w)) };
+    }
+    return { size: 10, W: MAXW };
+  }
+  var FILE = location.protocol === "file:";
+  function url(h){ return (FILE && h.slice(-1) === "/") ? h + "index.html" : h; }
+  function boat(t, href, k){
+    href = url(href);
+    var f = fit(t), W = f.W, hullH = 25, sailH = 56, deckY = sailH + 6, H = deckY + hullH + 8;
+    var foot = 64, jibLen = 30, truck = deckY - sailH;
+    var mastX = Math.round(W/2 - (foot - jibLen)/2);
+    var hull = '<path d="M0 ' + deckY + ' L' + W + ' ' + deckY + ' L' + (W-15) + ' ' + (deckY+hullH) +
+               ' Q ' + (W*0.5) + ' ' + (deckY+hullH+7) + ' 15 ' + (deckY+hullH) + ' Z" fill="#fff"/>';
+    var mast = '<rect x="' + (mastX-1) + '" y="' + truck + '" width="2" height="' + (deckY-truck) + '" fill="#fff"/>';
+    var main = '<path d="M' + (mastX+3) + ' ' + (deckY-4) + ' L' + (mastX+3) + ' ' + (truck+2) +
+               ' Q ' + (mastX+foot*0.62) + ' ' + (truck+sailH*0.46) + ' ' + (mastX+foot) + ' ' + (deckY-4) + ' Z" fill="#fff"/>';
+    var jib  = '<path d="M' + (mastX-3) + ' ' + (deckY-4) + ' L' + (mastX-3) + ' ' + (truck+10) +
+               ' Q ' + (mastX-jibLen*0.72) + ' ' + (deckY-sailH*0.30) + ' ' + (mastX-jibLen) + ' ' + (deckY-4) + ' Z" fill="#fff" opacity=".72"/>';
+    var pr = prom(k, items.length), VW = W + 8;
+    return '<a href="' + href + '" aria-label="' + t + '">' +
+           '<svg viewBox="0 0 ' + VW + ' ' + H + '" width="' + Math.round(VW * pr.sc) +
+             '" height="' + Math.round(H * pr.sc) + '">' +
+             '<g transform="translate(' + W + ',0) scale(-1,1)">' + main + jib + mast + hull + '</g>' +
+             '<text x="' + (W/2) + '" y="' + (deckY + hullH*0.62) + '" text-anchor="middle" class="nm" font-size="' + f.size + '">' + t + '</text>' +
+           '</svg></a>';
+  }
+  var host = document.getElementById("fleet");
+  host.innerHTML = items.map(function(i, k){ return boat(i[0], i[1], k); }).join("");
+  /* LAYOUT: "hybrid" keeps the 3x3 order but lets the boats sail;
+     "grid" is dead straight, "fleet" is the old scattered one */
+  var LAYOUT = "hybrid";
+
+  /* columns fill top to bottom, in the order of the items above.
+     Each column sits a little lower than the one before it, the way a fleet
+     falls into echelon, and every boat gets a small nudge and a slight heel. */
+  var COLS = [0.435, 0.640, 0.845], ROWS = [0.15, 0.425, 0.700],
+      LAG = [0, 0.070, 0.130],          /* each column trails the one before it */
+      SKEW = [0, 0.030, 0.058];         /* each row sits a little further right */
+  var berths = [[0.41,0.16],[0.53,0.24],[0.44,0.42],[0.61,0.56],[0.50,0.73],[0.70,0.85],[0.81,0.16],[0.86,0.62],[0.72,0.36]];
+
+  function layout(){
+    var vw = innerWidth, vh = innerHeight;
+    if (vw <= 1250){
+      [].forEach.call(host.children, function(a){
+        a.style.left = ""; a.style.top = ""; a.style.transform = "";
+        a.style.removeProperty("--heel");
+      });
+      return;
+    }
+
+    if (LAYOUT === "grid" || LAYOUT === "hybrid"){
+      var loose = (LAYOUT === "hybrid"), boats = [];
+      /* the eye starts at the card, so rank the nine berths by how near they are to it
+         and give the first item the closest one. Prominence by position, not by size. */
+      var cd = document.querySelector(".card").getBoundingClientRect();
+      var cdx = cd.left + cd.width / 2, cdy = cd.top + cd.height / 2, slots = [];
+      for (var si = 0; si < 9; si++){
+        var sc0 = si % 3, sr0 = Math.floor(si / 3);
+        var sx = (COLS[sc0] + (loose ? SKEW[sr0] : 0)) * vw - cdx;
+        var sy = (ROWS[sr0] + (loose ? LAG[sc0] : 0)) * vh - cdy;
+        slots.push({ i: si, d: Math.sqrt(sx * sx + sy * sy) });
+      }
+      slots.sort(function(p, q){ return p.d - q.d; });
+
+      [].forEach.call(host.children, function(a, k){
+        var w = a.firstChild.getAttribute("width") * 1, h = a.firstChild.getAttribute("height") * 1;
+        var col = slots[k].i % 3, row = Math.floor(slots[k].i / 3);
+        var cx = (COLS[col] + (loose ? SKEW[row] : 0)) * vw;
+        var cy = (ROWS[row] + (loose ? LAG[col] : 0)) * vh;
+        if (loose){
+          cx += (Math.random() - 0.5) * 0.085 * vw;
+          cy += (Math.random() - 0.5) * 0.115 * vh;
+        }
+        boats.push({ el: a, cx: cx, cy: cy, w: w, h: h, rank: k });
+      });
+
+      function pen(b){
+        b.cx = Math.max(24 + b.w / 2, Math.min(b.cx, vw - 24 - b.w / 2));
+        b.cy = Math.max(20 + b.h / 2, Math.min(b.cy, vh - 20 - b.h / 2));
+      }
+      boats.forEach(pen);
+
+      if (loose){
+        var TOL = 38, GX = 16, GY = 14;
+        /* the leading boats get more open water around them */
+        function room(b){ return b.rank < 3 ? (3 - b.rank) * 6 : 0; }
+        var cr = document.querySelector(".card").getBoundingClientRect();
+        var wall = { x: cr.left - 22, y: cr.top - 22, w: cr.width + 44, h: cr.height + 44 };
+
+        /* a boat may never sit on the card */
+        function clear(b){
+          var ox = wall.w / 2 + b.w / 2 - Math.abs(b.cx - (wall.x + wall.w / 2));
+          var oy = wall.h / 2 + b.h / 2 - Math.abs(b.cy - (wall.y + wall.h / 2));
+          if (ox <= 0 || oy <= 0) return;
+          if (ox <= oy) b.cx += (b.cx <= wall.x + wall.w / 2 ? -ox : ox);
+          else          b.cy += (b.cy <= wall.y + wall.h / 2 ? -oy : oy);
+          pen(b);
+        }
+
+        /* three centres on one line read as a rank, not a fleet:
+           push the middle boat off the line and ease the two ends back */
+        function unline(){
+          var hit = false;
+          for (var i = 0; i < boats.length; i++)
+            for (var j = i + 1; j < boats.length; j++)
+              for (var m = 0; m < boats.length; m++){
+                if (m === i || m === j) continue;
+                var A = boats[i], B = boats[j], M = boats[m];
+                var ux = B.cx - A.cx, uy = B.cy - A.cy, len = Math.sqrt(ux * ux + uy * uy);
+                if (len < 1) continue;
+                ux /= len; uy /= len;
+                var t = ((M.cx - A.cx) * ux + (M.cy - A.cy) * uy) / len;
+                if (t < 0.15 || t > 0.85) continue;      /* the middle boat only */
+                var d = (M.cx - A.cx) * -uy + (M.cy - A.cy) * ux;
+                if (Math.abs(d) >= TOL) continue;
+                var s = d === 0 ? (Math.random() < 0.5 ? -1 : 1) : (d > 0 ? 1 : -1);
+                var push = (TOL - Math.abs(d)) * 0.6 + 1;
+                M.cx += -uy * s * push;        M.cy += ux * s * push;
+                A.cx -= -uy * s * push * 0.25; A.cy -= ux * s * push * 0.25;
+                B.cx -= -uy * s * push * 0.25; B.cy -= ux * s * push * 0.25;
+                pen(A); pen(B); pen(M); hit = true;
+              }
+          return hit;
+        }
+
+        function spread(){
+          var hit = false;
+          for (var i = 0; i < boats.length; i++)
+            for (var j = i + 1; j < boats.length; j++){
+              var a = boats[i], b = boats[j], gap = room(a) + room(b);
+              var ox = (a.w + b.w) / 2 + GX + gap - Math.abs(a.cx - b.cx);
+              var oy = (a.h + b.h) / 2 + GY + gap - Math.abs(a.cy - b.cy);
+              if (ox <= 0 || oy <= 0) continue;
+              if (oy <= ox){
+                var sy = (a.cy <= b.cy ? -1 : 1) * (oy / 2 + 0.5);
+                a.cy += sy; b.cy -= sy;
+              } else {
+                var sx = (a.cx <= b.cx ? -1 : 1) * (ox / 2 + 0.5);
+                a.cx += sx; b.cx -= sx;
+              }
+              pen(a); pen(b); hit = true;
+            }
+          return hit;
+        }
+
+        /* every rule runs on every pass, so settling one never undoes another */
+        for (var it = 0; it < 140; it++){
+          var busy = unline();
+          for (var q = 0; q < 4; q++) if (!spread()) break; else busy = true;
+          boats.forEach(clear);
+          if (!busy) break;
+        }
+      }
+
+      boats.forEach(function(b){
+        b.el.style.left = Math.round(b.cx - b.w / 2) + "px";
+        b.el.style.top  = Math.round(b.cy - b.h / 2) + "px";
+        b.el.style.setProperty("--heel", loose ? ((Math.random() - 0.5) * 5).toFixed(2) + "deg" : "0deg");
+        b.el.style.transform = "rotate(var(--heel))";
+      });
+      return;
+    }
+
+    /* keep boats off the card and off each other */
+    var taken = [], card = document.querySelector(".card").getBoundingClientRect();
+    taken.push({ x: card.left, y: card.top, w: card.width, h: card.height, pad: 26 });
+
+    [].forEach.call(host.children, function(a, k){
+      var b = berths[k % berths.length];
+      var x = (b[0] + (Math.random()-0.5) * 0.05) * vw;
+      var y = (b[1] + (Math.random()-0.5) * 0.05) * vh;
+      var w = a.firstChild.getAttribute("width") * 1, h = a.firstChild.getAttribute("height") * 1;
+      x = Math.min(x, vw - w - 24); y = Math.min(y, vh - h - 20);
+
+      for (var pass = 0; pass < 30; pass++){
+        var hit = null;
+        for (var q = 0; q < taken.length; q++){
+          var r = taken[q], g2 = r.pad || 14;
+          if (x < r.x + r.w + g2 && x + w > r.x - g2 &&
+              y < r.y + r.h + g2 && y + h > r.y - g2){ hit = r; break; }
+        }
+        if (!hit) break;
+        y = hit.y + hit.h + (hit.pad || 14) + 2;
+        if (y + h > vh - 20){
+          y = 20 + Math.random() * 40;
+          x = hit.x + hit.w + (hit.pad || 14) + 2;
+          if (x + w > vw - 24){ x = vw - w - 24; break; }
+        }
+      }
+      taken.push({ x: x, y: y, w: w, h: h });
+
+      a.style.left = Math.round(x) + "px";
+      a.style.top  = Math.round(y) + "px";
+      a.style.setProperty("--heel", ((Math.random()-0.5) * 3).toFixed(2) + "deg");
+      a.style.transform = "rotate(var(--heel))";
+    });
+  }
+  function place(){
+    host.classList.add("settling");
+    layout();
+    void host.offsetWidth;   /* commit the heel while transitions are still off */
+    host.classList.remove("settling");
+  }
+  place();
+  var pt; addEventListener("resize", function(){ clearTimeout(pt); pt = setTimeout(place, 150); });
+})();
+</script>
+
+<script>
+/* contour background, new landscape each load */
+(function(){
+  var c = document.getElementById("maze"), x = c.getContext("2d");
+  var RES = 1, seed = null;
+
+  function roll(W, H){
+    var bumps = [], n = 5 + Math.floor(Math.random() * 4);
+    for (var k = 0; k < n; k++) bumps.push({
+      x: W * (-0.10 + Math.random() * 0.62), y: H * (0.42 + Math.random() * 0.72),
+      a: (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.9),
+      r: Math.min(W, H) * (0.18 + Math.random() * 0.34)
+    });
+    return { bumps: bumps, tx: Math.random() * 1000, ty: Math.random() * 1000,
+             hue0: Math.random() * 360, hstep: 9 + Math.random() * 7, sat: 88 + Math.random() * 10 };
+  }
+
+  function draw(d, reroll){
+    var W = innerWidth, H = innerHeight;
+    if (reroll || !seed) seed = roll(W, H);
+    var bumps = seed.bumps;
+
+    c.width = W * d; c.height = H * d; c.style.width = W + "px"; c.style.height = H + "px";
+    x.setTransform(d, 0, 0, d, 0, 0); x.clearRect(0, 0, W, H);
+
+    var LV = 22, NAR = W < 760, AF = NAR ? 0.5 : 1;
+    function col(L, a){ return "hsla(" + ((seed.hue0 + L * seed.hstep) % 360) + "," + seed.sat + "%,78%," + a + ")"; }
+
+    var step = 13, cols = Math.ceil(W / step) + 1, rows = Math.ceil(H / step) + 1,
+        g = new Float32Array(cols * rows), lo2 = 1e9, hi2 = -1e9;
+
+    /* gaussians separate, so exp() once per column and row, not per cell */
+    var EX = [], EY = [], nb = bumps.length;
+    for (var k2 = 0; k2 < nb; k2++){
+      var bp = bumps[k2], q = -1 / (2 * bp.r * bp.r),
+          ex = new Float64Array(cols), ey = new Float64Array(rows);
+      for (var i3 = 0; i3 < cols; i3++){ var ddx = i3 * step - bp.x; ex[i3] = Math.exp(q * ddx * ddx); }
+      for (var j3 = 0; j3 < rows; j3++){ var ddy = j3 * step - bp.y; ey[j3] = Math.exp(q * ddy * ddy); }
+      EX.push(ex); EY.push(ey);
+    }
+    var SX = new Float64Array(cols), CY = new Float64Array(rows);
+    for (var i4 = 0; i4 < cols; i4++) SX[i4] = 0.20 * Math.sin((i4 * step + seed.tx) / 260);
+    for (var j4 = 0; j4 < rows; j4++) CY[j4] = 0.16 * Math.cos((j4 * step + seed.ty) / 210);
+
+    for (var j = 0; j < rows; j++){
+      var cyj = CY[j], base = j * cols;
+      for (var i = 0; i < cols; i++){
+        var v2 = SX[i] + cyj;
+        for (var k3 = 0; k3 < nb; k3++) v2 += bumps[k3].a * EX[k3][i] * EY[k3][j];
+        g[base + i] = v2;
+        if (v2 < lo2) lo2 = v2; if (v2 > hi2) hi2 = v2;
+      }
+    }
+
+    /* marching squares, one pass: each cell only spans the levels its corners straddle */
+    var span = (hi2 - lo2) || 1, inv = LV / span, seg = new Array(LV);
+    for (var qq = 0; qq < LV; qq++) seg[qq] = [];
+
+    for (var j2 = 0; j2 < rows - 1; j2++) for (var i2 = 0; i2 < cols - 1; i2++){
+      var a = g[j2 * cols + i2], b = g[j2 * cols + i2 + 1],
+          cc = g[(j2 + 1) * cols + i2 + 1], dd = g[(j2 + 1) * cols + i2],
+          mn = a < b ? a : b, mx = a > b ? a : b;
+      if (cc < mn) mn = cc; if (cc > mx) mx = cc;
+      if (dd < mn) mn = dd; if (dd > mx) mx = dd;
+      var l0 = Math.ceil((mn - lo2) * inv), l1 = Math.floor((mx - lo2) * inv);
+      if (l0 < 1) l0 = 1; if (l1 > LV - 1) l1 = LV - 1;
+      if (l1 < l0) continue;
+      var x0 = i2 * step, y0 = j2 * step, x1 = x0 + step, y1 = y0 + step,
+          mxp = (x0 + x1) / 2, myp = (y0 + y1) / 2;
+      for (var L2 = l0; L2 <= l1; L2++){
+        var lvl = lo2 + span * L2 / LV,
+            s = (a > lvl ? 1 : 0) | (b > lvl ? 2 : 0) | (cc > lvl ? 4 : 0) | (dd > lvl ? 8 : 0);
+        if (s === 0 || s === 15) continue;
+        var pth = seg[L2];
+        switch (s){
+          case 1: case 14: pth.push("M", x0, myp, "L", mxp, y0); break;
+          case 2: case 13: pth.push("M", mxp, y0, "L", x1, myp); break;
+          case 3: case 12: pth.push("M", x0, myp, "L", x1, myp); break;
+          case 4: case 11: pth.push("M", x1, myp, "L", mxp, y1); break;
+          case 5: pth.push("M", x0, myp, "L", mxp, y1, "M", mxp, y0, "L", x1, myp); break;
+          case 6: case 9: pth.push("M", mxp, y0, "L", mxp, y1); break;
+          case 7: case 8: pth.push("M", x0, myp, "L", mxp, y1); break;
+          case 10: pth.push("M", x0, myp, "L", mxp, y0, "M", x1, myp, "L", mxp, y1); break;
+        }
+      }
+    }
+    x.lineJoin = "miter";
+    for (var L3 = 1; L3 < LV; L3++){
+      var pr = seg[L3]; if (!pr.length) continue;
+      var ix = (L3 % 4 === 0);
+      x.strokeStyle = col(L3, (ix ? 0.55 : 0.34) * AF); x.lineWidth = ix ? 1.6 : 1;
+      x.stroke(new Path2D(pr.join(" ")));
+    }
+
+    /* fade out from the bottom-left */
+    var cx = W * 0.06, cy = H * 1.02, R2 = Math.max(W, H) * (NAR ? 0.42 : 0.70),
+        gr = x.createRadialGradient(cx, cy, 0, cx, cy, R2);
+    gr.addColorStop(0, "rgba(0,0,0,1)");     gr.addColorStop(.38, "rgba(0,0,0,.92)");
+    gr.addColorStop(.68, "rgba(0,0,0,.26)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    x.globalCompositeOperation = "destination-in";
+    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    x.globalCompositeOperation = "source-over";
+  }
+
+  draw(RES, true);
+
+  var t; addEventListener("resize", function(){
+    clearTimeout(t); t = setTimeout(function(){ draw(RES, true); }, 150);
+  });
+})();
+</script>
+</body>
+</html>
