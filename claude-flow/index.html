@@ -155,7 +155,7 @@ N("mcp_reg","Where new tools come from","mcp",7,2620,-1930,"Discovery service fo
 N("mcp_comp","Desktop control","mcp",7,2870,-1980,"Screen-level control of native applications when no cleaner route exists."),
 
 /* ================= ZONE 2 · AUTOMATIONS ================= */
-N("mcp_sched","The scheduler","mcp",9,-120,-1420,"The scheduling service all six automations run on: daily, weekly, on-demand."),
+N("mcp_sched","The scheduler","mcp",9,-120,-1420,"The scheduling service every automation runs on: daily, weekly, on-demand."),
 N("t_weekly","Weekly pulse","auto",15,-1720,-1380,"The system's health check: captures sessions, harvests lessons, lints for drift, rebalances life pillars, pitches upgrades.","The reason the vault stays honest instead of rotting."),
 N("t_brief","Morning brief","auto",14,-820,-1400,"Reads the vault, calendar, two mailboxes and LinkedIn; ranks the day; flags collisions; writes a dated brief.","Being re-tuned after the system's own audit reviewed its cadence."),
 N("t_pipeline","Nightly pipeline","auto",16,480,-1400,"Sweeps six boards end to end, filters with bias-to-include, prepares materials under full rule governance and ships an audited digest. Never submits."),
@@ -465,7 +465,36 @@ N("hx_hitch","Hitchens's razor","rules",8,2380,-190,"What arrives without eviden
 N("hx_popper","Popper's falsifiability","rules",9,1980,-120,"A claim that forbids nothing explains nothing; state the test that could fail."),
 N("hx_sagan","Sagan standard","rules",8,2400,10,"Extraordinary claims carry an extraordinary burden of proof."),
 N("hx_bayes","Bayesian updating","rules",9,2060,80,"Move by the weight of the evidence, not by the confidence of the last thing said."),
-N("wk_fullday","Planning around a full day","core",12,2200,2500,"When the weekdays stop being free, every assumption behind the outreach machine has to be restated rather than quietly broken.","The system re-planned itself instead of pretending nothing changed.")
+N("wk_fullday","Planning around a full day","core",12,2200,2500,"When the weekdays stop being free, every assumption behind the outreach machine has to be restated rather than quietly broken.","The system re-planned itself instead of pretending nothing changed."),
+/* ================= ZONE 8 - THE OCTOBER RESCAN: DAILY ROUTINES ================= */
+/* -- Tailored morning reading -- */
+N("nw_hub","Tailored morning reading","auto",15,-1700,3980,"At 6:45 every morning, last night's pieces from the reading list are sorted against what the week holds, and the five worth reading arrive before the brief.","Built from the roadmap item that asked for daily reading to become talking points."),
+N("nw_src","The reading list","know",10,-2400,3900,"FT Alphaville and Letters, The Economist's Leaders and Free Exchange, the Fed and Bank of England blogs, Noahpinion, The Overshoot, Stratechery. The same list published on the site."),
+N("nw_books","Books in progress","know",6,-2400,4140,"When a chapter of Tooze or Piketty lines up with the day's news, the brief says which one."),
+N("nw_weight","Weighted by the week","rules",9,-2050,4220,"A piece scores higher when it touches something in the calendar: an interview, a seminar topic, a call with a fund."),
+N("nw_five","Five pieces, no more","rules",8,-1700,4300,"A hard cap. Anything past five waits for the weekend."),
+N("nw_why","One line on why","stage",6,-1350,4220,"Each piece arrives with one sentence on what it claims and why it matters today."),
+N("nw_talk","Talking points","stage",7,-1000,4140,"Pieces tied to a meeting are cut down to two or three points worth raising."),
+N("nw_weekend","Saturday long reads","out",8,-1350,4400,"The longer pieces of the week, sent as one email on Saturday morning."),
+N("br_news","Reading block in the brief","stage",6,-1000,3900,"The morning brief now opens with the top three picks."),
+
+/* -- Calendar keeper -- */
+N("cal_hub","Calendar keeper","auto",14,-100,3980,"Reads dates out of incoming mail, proposes events, and protects time around the ones that matter."),
+N("cal_parse","Dates out of email","stage",6,-450,4220,"Interview invites, deadlines and society events are spotted in the inbox and turned into proposed events."),
+N("cal_confirm","Proposed, never placed","rules",9,-100,4300,"Nothing lands in the calendar without a tap to confirm."),
+N("cal_lect","Lectures as fixed ground","know",7,-500,3900,"The term timetable is loaded once and treated as immovable."),
+N("cal_prep","Prep blocks","stage",6,250,4220,"An interview or a call gets a 45-minute prep block the evening before."),
+N("cal_travel","Travel buffers","stage",6,500,4100,"Time to cross London is added between back-to-back commitments in different places."),
+N("cal_pack","Meeting pack","out",8,600,4360,"Thirty minutes before a call: who it is with, the last thread, and the firm's recent news, on one page."),
+N("wa_hub","Week ahead","auto",11,300,3880,"Sunday at 18:00: the week laid out with its deadlines, its heavy days, and where reading time still fits."),
+
+/* -- Follow-up nudges -- */
+N("fu_hub","Follow-up nudges","auto",13,1500,3980,"Every weekday at 9:00, checks the follow-up folder and says which threads have gone quiet long enough to chase."),
+N("fu_clock","The five-working-day clock","rules",9,1850,4220,"No reply after five working days means a nudge is due. After two nudges the thread is closed."),
+N("fu_draft","Draft, never send","rules",9,1500,4300,"Nudges are written into the mailbox as drafts. Sending stays a human action."),
+N("fu_thanks","Thank-you notes","stage",6,1150,4220,"When a calendar event with a named person ends, a thank-you draft is ready that evening."),
+N("fu_closed","Closed threads","know",6,2200,4140,"Threads that ended, and why, so nobody is chased twice."),
+N("quiet","Quiet hours","rules",8,2200,3900,"Nothing arrives between 22:00 and 6:45 except the morning reading.")
 ];
 
 /* ============ EDGES (s feeds t) ============ */
@@ -571,7 +600,17 @@ E("cw_art","nt_artd",2),E("cw_flows","nt_wf",2),E("mem_fs","nt_imp",1),E("nt_viz
 E("hx_hub","hx_occam",2),E("hx_hub","hx_mdl",2),E("hx_hub","hx_hitch",2),E("hx_hub","hx_popper",2),E("hx_hub","hx_sagan",2),E("hx_hub","hx_bayes",2),
 E("hx_hub","co_hub",2),E("hx_hub","ledger",2),E("hx_hub","claude_md",2),E("v_recur","hx_hub",2),E("hx_hub","council",1),E("hx_popper","std_council",1),
 E("wk_fullday","md_hub",2),E("wk_fullday","md_burst",2),E("wk_fullday","constitution",2),E("wk_fullday","pl_b",1),E("wk_fullday","t_brief",1),
-E("colw_data","colw_pub",2)
+E("colw_data","colw_pub",2),
+/* october rescan */
+E("mcp_sched","nw_hub",2),E("mcp_sched","cal_hub",2),E("mcp_sched","fu_hub",2),E("mcp_sched","wa_hub",2),
+E("ft","nw_src",2),E("nw_src","nw_hub",3),E("nw_books","nw_weight",1),E("gcal","nw_weight",2),
+E("nw_hub","nw_weight",2),E("nw_weight","nw_five",2),E("nw_five","nw_why",2),E("nw_why","nw_talk",2),E("nw_five","nw_weekend",1),
+E("nw_why","br_news",2),E("br_news","t_brief",2),E("r_aware","nw_talk",1,1),E("nw_talk","cal_pack",2),
+E("gmail","cal_parse",2),E("outlook","cal_parse",1),E("cal_hub","cal_parse",2),E("cal_parse","cal_confirm",2),E("cal_confirm","gcal",2),
+E("cal_lect","cal_hub",2),E("cal_hub","cal_prep",2),E("cal_hub","cal_travel",1),E("cal_prep","gcal",1),E("route_meet","cal_pack",2),E("cal_prep","cal_pack",1),
+E("gcal","wa_hub",2),E("deadlines_md","wa_hub",2),E("wa_hub","o_briefs",1),
+E("standby","fu_hub",3),E("fu_hub","fu_clock",2),E("fu_clock","fu_draft",2),E("fu_draft","outlook",2),E("fu_clock","fu_closed",1),
+E("gcal","fu_thanks",2),E("fu_thanks","fu_draft",2),E("quiet","nw_hub",1),E("quiet","fu_hub",1),E("quiet","cal_hub",1)
 ];
 
 /* zone labels */
@@ -585,7 +624,8 @@ const ZONES=[
  {t:"LIFE DOMAINS",x:0,y:2120},
  {t:"THE COWORK ERA · AUGUST RESCAN",x:0,y:2270},
  {t:"HOW THE WORK ACTUALLY RUNS NOW",x:0,y:2820},
- {t:"WHAT IT HAS STARTED TO BUILD",x:0,y:3300}
+ {t:"WHAT IT HAS STARTED TO BUILD",x:0,y:3300},
+ {t:"THE OCTOBER RESCAN · DAILY ROUTINES",x:0,y:3760}
 ];
 
 /* ============ ENGINE ============ */
