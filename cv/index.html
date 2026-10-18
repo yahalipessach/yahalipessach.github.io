@@ -47,7 +47,10 @@
          font-weight: 400; color: #fff; }
   .bul::before { content: "\2022"; position: absolute; left: 0; top: 0; color: #fff; }
   /* dates sit in one fixed column, start flush left and end flush right */
-  .dd { padding: 0 5px; }
+  .row.sub .r { display: inline-grid; grid-template-columns: 4.7em auto 4.7em; align-items: baseline; }
+  .d0 { text-align: left; }
+  .d1 { text-align: right; }
+  .dd { padding: 0 5px; text-align: center; }
   section + section { margin-top: 26px; }
   @media (max-width: 760px) {
     body { padding: 44px 20px 56px; }
